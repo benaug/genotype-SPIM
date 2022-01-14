@@ -68,6 +68,23 @@ str(gammameans)
 
 #Now we have the information required to simulate a data set similar to the fisher data set
 
+#First, let's decide how many loci to use
+n.cov=9
+#discard unused information if you don't use them all
+if(n.cov!=9){
+  for(i in 9:(n.cov+1)){
+    gammameans[[i]]=NULL
+    unique.genos[[i]]=NULL
+    ptype[[i]]=NULL
+  }
+}
+n.levels=unlist(lapply(unique.genos,nrow)) #update n.levels in case some loci discarded
+#now all lists of length "n.cov"
+str(gammameans)
+str(unique.genos)
+str(ptype)
+n.levels
+
 #Normal SCR stuff
 N=78
 lam0=0.25
@@ -75,7 +92,6 @@ sigma=0.50
 K=10 #number of capture occasoins
 buff=3 #state space buffer. Should be at least 3 sigma.
 X<- expand.grid(3:11,3:11) #trapping array
-n.cov=9 #number of loci, 9 in full data set, but can simulate fewer loci if you want
 n.rep=2 #number of PCR reps per sample.
 
 IDcovs=vector("list",n.cov)
@@ -149,6 +165,7 @@ if(n.cov==1){
 }else{
   n.cov.use=n.cov
 }
+n.samples=data$n.samples
 
 #We can't use a list (easily) in nimble, so we use a ragged array instead
 ptypeArray = built.genos$ptypeArray
@@ -160,13 +177,13 @@ Niminits <- list(z=rep(1,M),s=nimbuild$s,G.true=nimbuild$G.true,ID=nimbuild$ID,c
 
 #constants for Nimble
 J=nrow(data$X)
-constants<-list(M=M,J=J,K=data$K,K1D=K1D,n.samples=nimbuild$n.samples,n.cov=n.cov.use,n.rep=n.rep.use,
+constants<-list(M=M,J=J,K=data$K,K1D=K1D,n.samples=n.samples,n.cov=n.cov.use,n.rep=n.rep.use,
                 xlim=nimbuild$xlim,ylim=nimbuild$ylim,na.ind=nimbuild$G.obs.NA.indicator,
                 n.levels=n.levels,max.levels=max(n.levels),ptype=built.genos$ptypeArray)
 
 #supply data to nimble
 Nimdata<-list(y.true=matrix(NA,nrow=M,ncol=J),G.obs=nimbuild$G.obs,
-              G.true=matrix(NA,nrow=M,ncol=n.cov.use),ID=rep(NA,nimbuild$n.samples),
+              G.true=matrix(NA,nrow=M,ncol=n.cov.use),ID=rep(NA,n.samples),
               z=rep(NA,M),X=as.matrix(data$X),capcounts=rep(NA,M))
 
 
@@ -193,7 +210,7 @@ conf <- configureMCMC(Rmodel,monitors=parameters, thin=nt, monitors2=parameters2
 conf$removeSampler("G.obs")
 conf$removeSampler("y.true")
 conf$addSampler(target = paste0("y.true[1:",M,",1:",J,"]"),
-                type = 'IDSampler',control = list(M=M,J=J,K1D=K1D,n.cov=n.cov.use,n.samples=nimbuild$n.samples,
+                type = 'IDSampler',control = list(M=M,J=J,K1D=K1D,n.cov=n.cov.use,n.samples=n.samples,
                                                   n.rep=n.rep.use,this.j=nimbuild$this.j,G.obs=data$G.obs,
                                                   na.ind=nimbuild$G.obs.NA.indicator,n.levels=n.levels),
                 silent = TRUE)
