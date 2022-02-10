@@ -296,7 +296,7 @@ for(i in 1:n.samples){
     for(iter in burnin:n.iter){
       count=count+1*(mvSamples2[iter,j]==mvSamples2[iter,i])
     }
-    pair.probs[i,j]=count/(n.iter-1)
+    pair.probs[i,j]=count/(n.iter-burnin)
   }
 }
 
