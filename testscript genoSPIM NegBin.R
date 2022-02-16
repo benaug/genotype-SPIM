@@ -6,6 +6,7 @@ source("init.data.negbin.R")
 source("map.genos.R")
 source("NimbleModel genoSPIM Negbin.R")
 source("Nimble Functions genoSPIM Negbin.R")
+source("sSampler.R")
 
 #make sure to run this line or the MCMC sampler will not work!
 nimble:::setNimbleOption('MCMCjointlySamplePredictiveBranches', FALSE)
@@ -234,12 +235,21 @@ for(i in 1:M){
 
 # ###Two *optional* sampler replacements:
 #replace default activity center sampler that updates x and y locations separately with a joint update
+#should be a little more efficient. Could use AFslice or block random walk.
+#BUT! I suggest using "sSampler", which is a RW block update for the x and y locs with no covariance,
+#AND only tuned for when z=1. When z=0, it draws from the prior, assumed to be uniform. 
 conf$removeSampler(paste("s[1:",M,", 1:2]", sep=""))
 for(i in 1:M){
   # conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
   #                 type = 'AF_slice',control=list(adaptive=TRUE),silent = TRUE)
-  conf$addSampler(target = paste("s[",i,", 1:2]", sep=""), #do not adapt covariance bc s's not deterministically linked to unmarked individuals
-                  type = 'RW_block',control=list(adaptive=TRUE,adaptScaleOnly=TRUE,adaptInterval=250),silent = TRUE)
+  # block RW option
+  # do not adapt covariance bc samples not deterministically linked to individuals
+  # longer adapt interval to average over more data configurations for each s_i
+  # conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
+  #                 type = 'RW_block',control=list(adaptive=TRUE,adaptScaleOnly=TRUE,adaptInterval=250),silent = TRUE)
+  conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
+                  type = 'sSampler',control=list(i=i,xlim=nimbuild$xlim,ylim=nimbuild$ylim,scale=0.25),silent = TRUE)
+  #scale parameter here is just the starting scale. It will be tuned.
 }
 
 #block update for lam0 and sigma helps when data sparse enough to cause correlated posteriors. 
@@ -257,7 +267,9 @@ Rmcmc <- buildMCMC(conf)
 Cmodel <- compileNimble(Rmodel)
 Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 
-# Run the model. Can ignore nimble errors about G.obs value NA or NaN, due to padding to keep dimensions constant for nimble
+# Run the model.
+#Can ignore nimble warnings about NA or NaN in ptype and theta
+#Can ignore nimble warnings about G.obs value NA or NaN, due to padding to keep dimensions constant for nimble
 start.time2<-Sys.time()
 Cmcmc$run(5000,reset=FALSE) #can extend run by rerunning this line
 end.time<-Sys.time()

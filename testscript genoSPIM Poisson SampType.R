@@ -1,12 +1,12 @@
 library(coda)
 library(nimble)
 library(abind)
-source("sim.genoSPIM.R")
+source("sim.genoSPIM.sampType.R")
 source("build.genos.R")
-source("init.data.poisson.R")
+source("init.data.poisson.sampType.R")
 source("map.genos.R")
-source("NimbleModel genoSPIM Poisson.R")
-source("Nimble Functions genoSPIM Poisson.R")
+source("NimbleModel genoSPIM Poisson sampType.R")
+source("Nimble Functions genoSPIM Poisson sampType.R")
 source("sSampler.R")
 
 #make sure to run this line or the MCMC sampler will not work!
@@ -104,15 +104,25 @@ for(i in 1:n.cov){
   # gamma[[i]]=rep(1/n.levels[i],n.levels[i]) #This simulates equal genotype frequencies
   gamma[[i]]=gammameans[[i]] #This uses the frequencies estimated from fisher data set
 }
-pID=rep(1,n.cov) #loci-level sample by replication amplification probabilities (controls level of missing scores)
-p.geno.het=c(0.85,0.149,0.001) #P(correct, allelic dropout,false allele) for heterozygotes (using fisher ests here)
-p.geno.hom=c(0.999,0.001) #P(correct,false allele) for homozygotes
 
+samp.levels=2 #number of sample type covariates. Each type has it's own genotyping error rates.
+#sample by replication amplification probabilities (controls level of missing scores)
+pID=rep(1,samp.levels) #one for each sample type in this data simulator
+p.geno.het=vector("list",samp.levels)
+p.geno.hom=vector("list",samp.levels)
+#P(correct, allelic dropout,false allele) for heterozygotes (using fisher ests here)
+p.geno.het[[1]]=c(0.806,0.185,0.009) #high quality samples
+p.geno.het[[2]]=c(0.489,0.496,0.015) #low quality samples
+#P(correct,false allele) for homozygotes
+p.geno.hom[[1]]=c(0.994,0.006) #high quality samples
+p.geno.hom[[2]]=c(0.999,0.001) #low quality samples
+p.sampType=c(0.52,0.48) #from fisher data, 52% high quality, 48% low
 
-data=sim.genoSPIM(N=N,lam0=lam0,sigma=sigma,K=K,X=X,buff=buff,#cap-recap parms
+data=sim.genoSPIM.sampType(N=N,lam0=lam0,sigma=sigma,K=K,X=X,buff=buff,#cap-recap parms
                   obstype="poisson",
                   n.cov=n.cov,pID=pID,n.rep=n.rep,
                   p.geno.hom=p.geno.hom,p.geno.het=p.geno.het,
+                  p.sampType=p.sampType,
                   gamma=gamma,IDcovs=IDcovs,ptype=ptype)
 
 #The observed data are 
@@ -122,6 +132,9 @@ head(data$this.j)
 head(data$this.k)
 #2) observed genotype replicates for every sample. Can have missing data indicated with NA
 t(data$G.obs[1,,]) #observed genotypes for 1st count member
+
+#3) the sample type covariates for every sample
+data$samp.type
 
 #Can use the map function to see which genotypes the enumerated genotypes correspond to
 ind=1 #change ind number ot look at different individuals
@@ -150,8 +163,16 @@ for(l in 1:n.cov){
 }
 
 #provide some ballpark inits to initialize latent variables and other data structures
-inits=list(lam0=1,sigma=1,gammaMat=gammaMat,p.geno.het=c(0.95,0.025,0.025),p.geno.hom=c(0.95,0.05)) #plug in some ballpark estimates to initialize data
-nimbuild=init.data.poisson(data=data,M=M,inits=inits)
+#to play nice with nimble, we'll store the genotyping error rates in a ragged matrix
+p.geno.het.init=matrix(NA,nrow=2,ncol=3)
+p.geno.hom.init=matrix(NA,nrow=2,ncol=2)
+p.geno.het.init[1,]=c(0.95,0.025,0.025)
+p.geno.het.init[2,]=c(0.95,0.025,0.025)
+p.geno.hom.init[1,]=c(0.95,0.05)
+p.geno.hom.init[2,]=c(0.95,0.05)
+
+inits=list(lam0=1,sigma=1,gammaMat=gammaMat,p.geno.het=p.geno.het.init,p.geno.hom=p.geno.hom.init) #plug in some ballpark estimates to initialize data
+nimbuild=init.data.poisson.sampType(data=data,M=M,inits=inits)
 
 #book keeping for case where n.rep=1, or n.cov=1
 #nimble does not like structures with any dimensions of 1. Padding the structures
@@ -185,7 +206,8 @@ constants<-list(M=M,J=J,K=data$K,K1D=K1D,n.samples=n.samples,n.cov=n.cov.use,n.r
 #supply data to nimble
 Nimdata<-list(y.true=matrix(NA,nrow=M,ncol=J),G.obs=nimbuild$G.obs,
               G.true=matrix(NA,nrow=M,ncol=n.cov.use),ID=rep(NA,n.samples),
-              z=rep(NA,M),X=as.matrix(data$X),capcounts=rep(NA,M))
+              z=rep(NA,M),X=as.matrix(data$X),capcounts=rep(NA,M),
+              samp.type=data$samp.type)
 
 
 # set parameters to monitor
@@ -200,7 +222,7 @@ nt2=50#thin more
 # can ignore warnings about 1) ID in constants 2) possible size mismatch for G.obs.
 start.time<-Sys.time()
 Rmodel <- nimbleModel(code=NimModel, constants=constants, data=Nimdata,check=FALSE,inits=Niminits)
-conf <- configureMCMC(Rmodel,monitors=parameters, thin=nt, monitors2=parameters2,thin2=nt2,useConjugacy = TRUE) 
+conf <- configureMCMC(Rmodel,monitors=parameters, thin=nt, monitors2=parameters2,thin2=nt2,useConjugacy = TRUE)
 
 #conf$printSamplers() #shows the samplers used for each parameter and latent variable
 
@@ -213,7 +235,8 @@ conf$removeSampler("y.true")
 conf$addSampler(target = paste0("y.true[1:",M,",1:",J,"]"),
                 type = 'IDSampler',control = list(M=M,J=J,K1D=K1D,n.cov=n.cov.use,n.samples=n.samples,
                                                   n.rep=n.rep.use,this.j=nimbuild$this.j,G.obs=data$G.obs,
-                                                  na.ind=nimbuild$G.obs.NA.indicator,n.levels=n.levels),
+                                                  na.ind=nimbuild$G.obs.NA.indicator,n.levels=n.levels,
+                                                  samp.type=data$samp.type),
                 silent = TRUE)
 
 #replace default G.true sampler, which is not correct, with custom sampler for G.true, "GSampler"
@@ -223,7 +246,8 @@ for(i in 1:M){
     conf$addSampler(target = paste("G.true[",i,",",m,"]", sep=""),
                     type = 'GSampler',
                     control = list(i = i,m=m,n.levels=n.levels,n.rep=n.rep.use,
-                                   na.ind=nimbuild$G.obs.NA.indicator[,m,]), silent = TRUE)
+                                   na.ind=nimbuild$G.obs.NA.indicator[,m,],
+                                   samp.type=data$samp.type), silent = TRUE)
   }
 }
 
@@ -231,7 +255,7 @@ for(i in 1:M){
 #replace default activity center sampler that updates x and y locations separately with a joint update
 #should be a little more efficient. Could use AFslice or block random walk.
 #BUT! I suggest using "sSampler", which is a RW block update for the x and y locs with no covariance,
-#AND only tuned for when z=1. When z=0, it draws from the prior, assumed to be uniform. 
+#AND only tuned for when z=1. When z=0, it draws from the prior, assumed to be uniform.
 conf$removeSampler(paste("s[1:",M,", 1:2]", sep=""))
 for(i in 1:M){
   # conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
@@ -247,7 +271,7 @@ for(i in 1:M){
 }
 
 
-#block update for lam0 and sigma helps when data sparse enough to cause correlated posteriors. 
+#block update for lam0 and sigma helps when data sparse enough to cause correlated posteriors.
 #Slice seems more efficient that RW_block, but slower and may depend on data sparsity
 #If including covariate effects on lam0 or sigma, maybe start with default samplers and see
 #which parameters' posteriors are correlated before deciding what, if anything, to block.
