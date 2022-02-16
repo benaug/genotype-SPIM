@@ -93,7 +93,7 @@ sigma=0.50
 K=10 #number of capture occasoins
 buff=3 #state space buffer. Should be at least 3 sigma.
 X<- expand.grid(3:11,3:11) #trapping array
-n.rep=2 #number of PCR reps per sample.
+n.rep=3 #number of PCR reps per sample.
 
 IDcovs=vector("list",n.cov)
 for(i in 1:n.cov){
@@ -166,10 +166,10 @@ for(l in 1:n.cov){
 #to play nice with nimble, we'll store the genotyping error rates in a ragged matrix
 p.geno.het.init=matrix(NA,nrow=2,ncol=3)
 p.geno.hom.init=matrix(NA,nrow=2,ncol=2)
-p.geno.het.init[1,]=c(0.95,0.025,0.025)
-p.geno.het.init[2,]=c(0.95,0.025,0.025)
-p.geno.hom.init[1,]=c(0.95,0.05)
-p.geno.hom.init[2,]=c(0.95,0.05)
+p.geno.het.init[1,]=c(0.98,0.01,0.01)
+p.geno.het.init[2,]=c(0.98,0.01,0.01)
+p.geno.hom.init[1,]=c(0.99,0.01)
+p.geno.hom.init[2,]=c(0.99,0.01)
 
 inits=list(lam0=1,sigma=1,gammaMat=gammaMat,p.geno.het=p.geno.het.init,p.geno.hom=p.geno.hom.init) #plug in some ballpark estimates to initialize data
 nimbuild=init.data.poisson.sampType(data=data,M=M,inits=inits)
