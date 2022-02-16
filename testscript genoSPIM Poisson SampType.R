@@ -87,7 +87,7 @@ str(ptype)
 n.levels
 
 #Normal SCR stuff
-N=78
+N=38 #using a lower density than testscript for 1 set of genotyping error rates. Very slow to converge for high D.
 lam0=0.25
 sigma=0.50
 K=10 #number of capture occasoins
