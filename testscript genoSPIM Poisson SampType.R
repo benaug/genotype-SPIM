@@ -87,13 +87,13 @@ str(ptype)
 n.levels
 
 #Normal SCR stuff
-N=38 #using a lower density than testscript for 1 set of genotyping error rates. Very slow to converge for high D.
+N=38 
 lam0=0.25
 sigma=0.50
 K=10 #number of capture occasoins
 buff=3 #state space buffer. Should be at least 3 sigma.
 X<- expand.grid(3:11,3:11) #trapping array
-n.rep=3 #number of PCR reps per sample.
+n.rep=2 #number of PCR reps per sample.
 
 IDcovs=vector("list",n.cov)
 for(i in 1:n.cov){

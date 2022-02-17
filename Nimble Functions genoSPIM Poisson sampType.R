@@ -164,7 +164,7 @@ GSampler <- nimbleFunction(
       for(i2 in 1:length(these.samps)){
         for(obs in 1:n.rep){
           if(na.ind[these.samps[i2],obs]==FALSE){ #if observed
-            error.probs=error.probs*model$theta[m,samp.type[i2],G.obs[these.samps[i2],m,obs],1:n.levels[m]]
+            error.probs=error.probs*model$theta[m,samp.type[these.samps[i2]],G.obs[these.samps[i2],m,obs],1:n.levels[m]]
           }
         }
       }
