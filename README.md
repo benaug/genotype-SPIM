@@ -8,4 +8,4 @@ Currently, only the Poisson and negative binomial observation models are support
 
 The negative binomial observation model will require "better data" in order to estimate the overdispersion parameter, i.e., more genotype information and/or less home range overlap. This sampler demonstrates why I've set up the custom ID update the way I have. Using the Poisson observation model, genoSPIM can be written in BUGS code without the custom ID update by specifying the *independent* sample-level likelihoods. However, once you switch to any other observation model, you cannot do this. The Metropolis-Hastings ID update will work with any observation model (assuming you switch in the correct likelihood in the custom update).
 
-Convergence can be slow with abundant genotype information and lower genotyping error rates.
+DISCLAIMER: There has been a bug until 2/17/2022 in the G.true update. I had the true vs. observed dimensions wrong. This was not enough to notice incorrect performance in the original simulation settings, but once lowered, it became apparent. I have uploaded the fix, but will test more thoroughly and then remove this disclaimer.
