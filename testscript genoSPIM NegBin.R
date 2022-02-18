@@ -69,7 +69,7 @@ str(gammameans)
 #Now we have the information required to simulate a data set similar to the fisher data set
 
 #First, let's decide how many loci to use
-n.cov=2
+n.cov=9
 #discard unused information if you don't use them all
 if(n.cov!=9){
   for(i in 9:(n.cov+1)){
@@ -143,7 +143,7 @@ for(i in 1:length(these.samps)){
 ##Structure simulated data for nimble
 
 #Data augmentation level
-M=150
+M=175
 J=nrow(X)
 K1D=rep(K,J) #trap operation matrix, number of occasions trap j is operable
 data$K1D=K1D #add to data object to build data below
@@ -198,7 +198,7 @@ Nimdata<-list(y.true=matrix(NA,nrow=M,ncol=J),G.obs=nimbuild$G.obs,
 parameters<-c('psi','lam0','theta.d','sigma','N','n','p.geno.het','p.geno.hom','gammaMat')
 
 #can also monitor a different set of parameters with a different thinning rate
-parameters2 <- c('ID')
+parameters2 <- c('ID',"G.true")
 nt=1 #thinning rate
 nt2=50#thin more
 
@@ -286,12 +286,14 @@ plot(mcmc(mvSamples[200:nrow(mvSamples),-idx]))
 data$n #number of individuals captured to compare to posterior for n. No uncertainty with enough genotype info.
 
 ##Explore ID posteriors
-#Assuming ID posterior was monitored in mvSamples2 (and only ID)
+#Assuming ID posterior was monitored in mvSamples2
 mvSamples2 = as.matrix(Cmcmc$mvSamples2)
-plot(mcmc(mvSamples2[2:nrow(mvSamples2),]))
+idx=grep("ID",colnames(mvSamples2))
+plot(mcmc(mvSamples2[2:nrow(mvSamples2),idx]))
 
 library(MCMCglmm)
-IDpost=posterior.mode(mvSamples2[100:nrow(mvSamples2),])
+burnin=50
+IDpost=round(posterior.mode(mvSamples2[burnin:nrow(mvSamples2),idx]))
 #For simulated data sets, comparing posterior mode ID to truth.
 #Numbers will not be the same, but all samples with same true ID will have
 #same ID in posterior mode when posterior mode is exactly correct. Numbers just don't match up.
@@ -299,7 +301,7 @@ cbind(data$ID,round(IDpost))
 
 #calculate posterior probability of pairwise sample matches
 #P(sample x belongs to same individual as sample y)
-burnin=2 #where to start. Don't start at 1, is NA.
+burnin=50 #where to start. Don't start at 1, is NA.
 n.iter=nrow(mvSamples2)-burnin+1
 pair.probs=matrix(NA,n.samples,n.samples)
 for(i in 1:n.samples){
@@ -308,7 +310,7 @@ for(i in 1:n.samples){
     for(iter in burnin:n.iter){
       count=count+1*(mvSamples2[iter,j]==mvSamples2[iter,i])
     }
-    pair.probs[i,j]=count/(n.iter-burnin)
+    pair.probs[i,j]=count/(n.iter-burnin+1)
   }
 }
 
@@ -316,3 +318,45 @@ this.samp=1 #sample number to look at
 pair.probs[this.samp,] #probability this sample is from same individual as all other samples
 pair.probs[this.samp,data$ID==data$ID[this.samp]] #for simulated data, these are the other samples truly from same individual
 
+
+#inspect G.true (true genotype) posteriors
+idx=grep("G.true",colnames(mvSamples2))
+
+#posterior mode of true genotypes. Note, this is the posterior mode of each loci individually
+#I expect this should usually be the same at the posterior mode complete genotype, but this
+#can also be calculated from this posterior
+library(MCMCglmm)
+burnin=50
+G.mode=round(posterior.mode(mvSamples2[burnin:nrow(mvSamples2),idx]))
+G.mode=matrix(G.mode,nrow=M)
+#rearrange all G.true samples to look at range of values instead of just the mode
+G.samps=mvSamples2[burnin:nrow(mvSamples2),idx]
+G.samps=array(t(G.samps),dim=c(M,n.cov,nrow(G.samps)))
+
+#look at posterior mode genotype of each individual (not numbered the same as in true data,
+#but numbers are the same as in IDpost)
+ind=1 #change ind number to look at different individuals
+G.mode[ind,] #True genotype of individual 1, enumerated
+map.genos(G.mode[ind,],unique.genos) #converted back to actual genotypes
+
+#which samples were most commonly assigned to this individual? (assumes you calculated IDpost above)
+these.samps=which(IDpost==ind)
+if(length(these.samps>0)){
+  for(i in 1:length(these.samps)){
+    print(map.genos(t(data$G.obs[these.samps[i],,]),unique.genos))
+  }
+}else{
+  "No sample's posterior mode was this individual"
+}
+
+#here we can look at the entire posterior of true genotypes for this individual
+#Note, individuals with samples strongly linked to them will have precisely
+#estimated true genotypes while individuals without samples strongly linked
+#will have very imprecisely estimated true genotypes. If no samples ever allocate,
+#you are just drawing true genotypes from the estimated population-level genotype frequencies
+out=t(apply(G.samps[ind,,],2,FUN=map.genos,unique.genos))
+head(out,10)
+
+loci=1
+loci=loci+1
+table(out[,loci])
