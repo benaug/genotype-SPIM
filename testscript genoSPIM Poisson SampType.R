@@ -107,7 +107,7 @@ for(i in 1:n.cov){
 
 samp.levels=2 #number of sample type covariates. Each type has it's own genotyping error rates.
 #sample by replication amplification probabilities (controls level of missing scores)
-pID=rep(1,samp.levels) #one for each sample type in this data simulator
+pID=c(0.999,0.5) #one for each sample type in this data simulator
 p.geno.het=vector("list",samp.levels)
 p.geno.hom=vector("list",samp.levels)
 #P(correct, allelic dropout,false allele) for heterozygotes (using fisher ests here)
@@ -325,7 +325,7 @@ for(i in 1:n.samples){
   for(j in 1:n.samples){
     count=0
     for(iter in burnin:n.iter){
-      count=count+1*(mvSamples2[iter,j]==mvSamples2[iter,i])
+      count=count+1*(mvSamples2[iter,idx[j]]==mvSamples2[iter,idx[i]])
     }
     pair.probs[i,j]=count/(n.iter-burnin+1)
   }
@@ -353,7 +353,7 @@ G.samps=array(t(G.samps),dim=c(M,n.cov,nrow(G.samps)))
 #look at posterior mode genotype of each individual (not numbered the same as in true data,
 #but numbers are the same as in IDpost)
 ind=1 #change ind number to look at different individuals
-G.mode[ind,] #True genotype of individual 1, enumerated
+G.mode[ind,] #True genotype of focal individual, enumerated
 map.genos(G.mode[ind,],unique.genos) #converted back to actual genotypes
 
 #which samples were most commonly assigned to this individual? (assumes you calculated IDpost above)
