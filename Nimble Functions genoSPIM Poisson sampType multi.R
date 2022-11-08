@@ -14,8 +14,8 @@ GetDetectionRate <- nimbleFunction(
   }
 )
 
-dNBVector <- nimbleFunction(
-  run = function(x = double(1), p = double(1), theta.d = double(1), z = double(0),
+dPoissonVector <- nimbleFunction(
+  run = function(x = double(1), lam = double(1), z = double(0),
                  log = integer(0)) {
     returnType(double(0))
     if(z==0){
@@ -25,17 +25,17 @@ dNBVector <- nimbleFunction(
         return(0)
       }
     }else{
-      logProb <- sum(dnbinom(x, p = p, size = theta.d, log = TRUE))
+      logProb <- sum(dpois(x, lambda = lam, log = TRUE))
       return(logProb)
     }
   }
 )
 
-#dummy random vector generator to make nimble happy
-rNBVector <- nimbleFunction(
-  run = function(n = integer(0),p = double(1),theta.d = double(1), z = double(0)) {
+#make dummy random vector generator to make nimble happy
+rPoissonVector <- nimbleFunction(
+  run = function(n = integer(0),lam = double(1),z = double(0)) {
     returnType(double(1))
-    J=nimDim(p)[1]
+    J=nimDim(lam)[1]
     out=numeric(J,value=0)
     return(out)
   }
@@ -142,24 +142,28 @@ GSampler <- nimbleFunction(
   contains = sampler_BASE,
   setup = function(model, mvSaved, target, control) {
     # Defined stuff
+    n.samples <- control$n.samples
     n.levels <- control$n.levels
     n.rep <- control$n.rep
     na.ind <- control$na.ind
+    G.obs <- control$G.obs #feed in here so I dont' have to use a loop to pull out of model. "can't do math"
     calcNodes <- model$getDependencies(target)
+    g <- control$g
     i <- control$i
     m <- control$m
+    samp.type <- control$samp.type
   },
   run = function() {
-    G.probs=model$gammaMat[m,1:n.levels[m]] #pull out genotype frequencies
-    if(model$G.latent[i,m]==FALSE){ #these individual-loci have samples allocated to them currently
+    G.probs=model$gammaMat[g,m,1:n.levels[m]] #pull out genotype frequencies
+    if(model$G.latent[g,i,m]==FALSE){ #these individual-loci have samples allocated to them currently
       #build proposal distribution using genotype frequency likelihood and classification likelihood.
-      these.samps=which(model$ID==i)
-      G.obs <- model$G.obs
+      these.samps=which(model$ID[g,1:n.samples]==i)
+      # G.obs <- model$G.obs[g,1:n.samples,,]
       error.probs=rep(1,n.levels[m]) #error probs|category level
       for(i2 in 1:length(these.samps)){
         for(obs in 1:n.rep){
           if(na.ind[these.samps[i2],obs]==FALSE){ #if observed
-            error.probs=error.probs*model$theta[m,1:n.levels[m],G.obs[these.samps[i2],m,obs]]
+            error.probs=error.probs*model$theta[m,samp.type[these.samps[i2]],1:n.levels[m],G.obs[these.samps[i2],m,obs]]
           }
         }
       }
@@ -172,10 +176,10 @@ GSampler <- nimbleFunction(
     }
     #MH step
     model.lp.initial <- model$getLogProb(calcNodes) #initial logProb
-    prop.back <- G.probs[model$G.true[i,m]] #backwards proposal prob
+    prop.back <- G.probs[model$G.true[g,i,m]] #backwards proposal prob
     G.prop <- rcat(1,G.probs[1:n.levels[m]])
     prop.for <- G.probs[G.prop] #forwards proposal prob
-    model$G.true[i,m] <<- G.prop #store in model
+    model$G.true[g,i,m] <<- G.prop #store in model
     model.lp.proposed <- model$calculate(calcNodes)#proposed logProb
     log_MH_ratio <- (model.lp.proposed+log(prop.back)) - (model.lp.initial+log(prop.for))
     # log_MH_ratio
@@ -197,11 +201,13 @@ GSampler2 <- nimbleFunction(
   setup = function(model, mvSaved, target, control) {
     # Defined stuff
     M <- control$M
+    g <- control$g
     n.cov <- control$n.cov
     n.levels <- control$n.levels
     n.samples <- control$n.samples
     n.rep <- control$n.rep
     na.ind <- control$na.ind
+    samp.type <- control$samp.type
     G.true.nodes <- control$G.true.nodes
     G.obs.nodes <- control$G.obs.nodes
     calcNodes <- control$calcNodes
@@ -212,19 +218,24 @@ GSampler2 <- nimbleFunction(
     for(m in 1:n.cov){
       G.obs.m.idx=seq((m-1)*n.samples+1,(m-1)*n.samples+n.samples,1) #get index for cov m for all samples
       for(i in 1:M){
-        G.probs=model$gammaMat[m,1:n.levels[m]] #pull out genotype frequencies
-        if(model$G.latent[i,m]==FALSE){ #these individual-loci have samples allocated to them currently
+        G.probs=model$gammaMat[g,m,1:n.levels[m]] #pull out genotype frequencies
+        if(model$G.latent[g,i,m]==FALSE){ #these individual-loci have samples allocated to them currently
           #must use MH
           #build proposal distribution using genotype frequency likelihood and classification likelihood.
-          these.samps=which(model$ID==i)
+          these.samps=which(model$ID[g,]==i)
           G.obs.idx=G.obs.m.idx[these.samps] #pull out nodes for these samples at cov m
           n.these.samps=length(these.samps)
-          G.obs <- model$G.obs
+          G.obs=array(NA,dim=c(n.samples,n.cov,n.rep))
+          #pulling G.obs out in loop bc "can't do math in more than 2 dimensions"
+          # G.obs <- model$G.obs[g,1:n.samples,,1:n.rep]
+          for(r in 1:n.rep){
+            G.obs[,,r] <- model$G.obs[g,1:n.samples,1:n.cov,r]
+          }
           error.probs=rep(1,n.levels[m]) #error probs|category level
           for(i2 in 1:length(these.samps)){
             for(obs in 1:n.rep){
               if(na.ind[these.samps[i2],m,obs]==FALSE){ #if observed
-                error.probs=error.probs*model$theta[m,1:n.levels[m],G.obs[these.samps[i2],m,obs]]
+                error.probs=error.probs*model$theta[m,samp.type[these.samps[i2]],1:n.levels[m],G.obs[these.samps[i2],m,obs]]
               }
             }
           }
@@ -233,11 +244,11 @@ GSampler2 <- nimbleFunction(
           #MH step
           G.true.lp.initial <- model$getLogProb(G.true.nodes[node.idx]) #initial logProb for G.true
           G.obs.lp.initial <- model$getLogProb(G.obs.nodes[G.obs.idx]) #initial logProb for G.obs
-          prop.back <- G.probs[model$G.true[i,m]] #backwards proposal prob
+          prop.back <- G.probs[model$G.true[g,i,m]] #backwards proposal prob
           G.prop <- rcat(1,G.probs[1:n.levels[m]]) #proposal
-          if(G.prop!=model$G.true[i,m]){ #we can skip this if we propose the current value
+          if(G.prop!=model$G.true[g,i,m]){ #we can skip this if we propose the current value
             prop.for <- G.probs[G.prop] #forwards proposal prob
-            model$G.true[i,m] <<- G.prop #store in model
+            model$G.true[g,i,m] <<- G.prop #store in model
             G.true.lp.proposed <- model$calculate(G.true.nodes[node.idx])#proposed logProb for G.true
             G.obs.lp.proposed <- model$calculate(G.obs.nodes[G.obs.idx])#proposed logProb for G.true
             log_MH_ratio <- (G.true.lp.proposed+G.obs.lp.proposed+log(prop.back)) -
@@ -245,9 +256,9 @@ GSampler2 <- nimbleFunction(
             # log_MH_ratio
             accept <- decide(log_MH_ratio)
             if(accept) {
-              mvSaved["G.true",1][i,m] <<- model[["G.true"]][i,m]
+              mvSaved["G.true",1][g,i,m] <<- model[["G.true"]][g,i,m]
             } else {
-              model[["G.true"]][i,m] <<- mvSaved["G.true",1][i,m] #set back to init
+              model[["G.true"]][g,i,m] <<- mvSaved["G.true",1][g,i,m] #set back to init
               model$calculate(G.true.nodes[node.idx]) #set log prob back to init
               model$calculate(G.obs.nodes[G.obs.idx]) #set log prob back to init
             }
@@ -257,9 +268,9 @@ GSampler2 <- nimbleFunction(
           #full conditional if no other parameters depend on G.true. So always accept
           G.probs=G.probs/sum(G.probs)
           G.prop <- rcat(1,G.probs[1:n.levels[m]])
-          model$G.true[i,m] <<- G.prop #store in model
+          model$G.true[g,i,m] <<- G.prop #store in model
           model$calculate(G.true.nodes[node.idx]) #update G.true logprob. No G.obs logprob.
-          mvSaved["G.true",1][i,m] <<- model[["G.true"]][i,m]
+          mvSaved["G.true",1][g,i,m] <<- model[["G.true"]][g,i,m]
         }
         node.idx=node.idx+1 #increment
       }
@@ -270,13 +281,13 @@ GSampler2 <- nimbleFunction(
   methods = list( reset = function () {} )
 )
 
-
 #------------------------------------------------------------------
 # Customer sampler to update latent IDs, and associated arrays
 #------------------------------------------------------------------
 IDSampler <- nimbleFunction(
   contains = sampler_BASE,
   setup = function(model, mvSaved, target, control) {
+    g <- control$g
     M<-control$M
     J <- control$J
     K1D <- control$K1D
@@ -287,23 +298,22 @@ IDSampler <- nimbleFunction(
     n.samples <- control$n.samples
     this.j <- control$this.j
     na.ind <- control$na.ind
+    samp.type <- control$samp.type
     calcNodes <- model$getDependencies(c("y.true","G.obs"))
   },
   run = function() {
-    G.true <- model$G.true
-    y.true <- model$y.true
-    ID.curr <- model$ID
-    z <- model$z
+    G.true <- model$G.true[g,1:M,1:n.cov]
+    y.true <- model$y.true[g,1:M,1:J]
+    ID.curr <- model$ID[g,1:n.samples]
+    z <- model$z[g,1:M]
     theta <- model$theta
-    lam <- model$lam
+    lam <- model$lam[g,1:M,1:J]
+    
     #Precalculate likelihoods
     ll.y=matrix(0,nrow=M,ncol=J) #M x J most efficient here
     for(i in 1:M){
       if(z[i]==1){
-        for(j in 1:J){
-          #if theta.d is a function of individual or trap covariates, need to fix the line below, e.g., size=model$theta.d[i,j]*model$K1D[j]
-          ll.y[i,j] <-  dnbinom(y.true[i,j],size=model$theta.d[1]*model$K1D[j],prob=model$p[i,j], log = TRUE)
-        }
+        ll.y[i,1:J]=dpois(y.true[i,1:J],K1D[1:J]*lam[i,1:J],log=TRUE)
       }
     }
     ll.y.cand=ll.y
@@ -312,7 +322,7 @@ IDSampler <- nimbleFunction(
       for(m in 1:n.cov){
         for(rep in 1:n.rep){
           if(na.ind[l,m,rep]==FALSE){
-            ll.theta[l,m,rep]=dcat(G.obs[l,m,rep],theta[m,G.true[ID.curr[l],m],1:n.levels[m]],log=TRUE)
+            ll.theta[l,m,rep]=dcat(G.obs[l,m,rep],theta[m,samp.type[l],G.true[ID.curr[l],m],1:n.levels[m]],log=TRUE)
           }
         }
       }
@@ -330,7 +340,7 @@ IDSampler <- nimbleFunction(
           for(m in 1:n.cov){
             for(rep in 1:n.rep){
               if(na.ind[l,m,rep]==FALSE){ #if observed
-                G.probs[i]=G.probs[i]*theta[m,G.true[i,m],G.obs[l,m,rep]]
+                G.probs[i]=G.probs[i]*theta[m,samp.type[l],G.true[i,m],G.obs[l,m,rep]]
               }
             }
           }
@@ -355,15 +365,13 @@ IDSampler <- nimbleFunction(
         focalbackprob=(sum(ID.cand==ID.cand[l])/n.samples)*(y.cand[ID.cand[l],this.j[l]]/sum(y.cand[ID.cand[l],]))
 
         ##update ll.y
-        #if theta.d is a function of individual or trap covariates, need to fix these 2 lines below, e.g., size=model$theta.d[swapped[1],this.j[l]]*model$K1D[this.j[l]]
-        ll.y.cand[swapped[1],this.j[l]]=dnbinom(y.cand[swapped[1],this.j[l]],size=model$theta.d[1]*model$K1D[this.j[l]],prob=model$p[swapped[1],this.j[l]],log=TRUE)
-        ll.y.cand[swapped[2],this.j[l]]=dnbinom(y.cand[swapped[2],this.j[l]],size=model$theta.d[1]*model$K1D[this.j[l]],prob=model$p[swapped[2],this.j[l]],log=TRUE)
+        ll.y.cand[swapped,this.j[l]]=dpois(y.cand[swapped,this.j[l]],K1D[this.j[l]]*lam[swapped,this.j[l]],log=TRUE)
 
         #update ll.theta
         for(m in 1:n.cov){
           for(rep in 1:n.rep){
             if(na.ind[l,m,rep]==FALSE){
-              ll.theta.cand[l,m,rep]=dcat(G.obs[l,m,rep],theta[m,G.true[ID.cand[l],m],1:n.levels[m]],log=TRUE)
+              ll.theta.cand[l,m,rep]=dcat(G.obs[l,m,rep],theta[m,samp.type[l],G.true[ID.cand[l],m],1:n.levels[m]],log=TRUE)
             }else{
               ll.theta.cand[l,m,rep]=0
             }
@@ -392,11 +400,127 @@ IDSampler <- nimbleFunction(
       }
     }
     #put everything back into the model$stuff after updating y.sight.true, y.sight.true.event
-    model$y.true <<- y.true
-    model$ID <<- ID.curr
-    model$G.latent <<- G.latent
+    model$y.true[g,1:M,1:J] <<- y.true
+    model$ID[g,1:n.samples] <<- ID.curr
+    model$G.latent[g,1:M,1:n.cov] <<- G.latent
     # model.lp.proposed <-
     model$calculate(calcNodes) #update dependencies, likelihoods
+    copy(from = model, to = mvSaved, row = 1, nodes = calcNodes, logProb = TRUE)
+  },
+  methods = list( reset = function () {} )
+)
+
+#Required custom update for N/z
+zSampler <- nimbleFunction(
+  contains = sampler_BASE,
+  setup = function(model, mvSaved, target, control) {
+    g <- control$g
+    J <- control$J
+    M <- control$M
+    z.ups <- control$z.ups
+    xlim <- control$xlim
+    ylim <- control$ylim
+    y.nodes <- control$y.nodes
+    lam.nodes <- control$lam.nodes
+    N.node <- control$N.node
+    z.nodes <- control$z.nodes
+    calcNodes <- control$calcNodes
+  },
+  run = function() {
+    for(up in 1:z.ups){ #how many updates per iteration?
+      #propose to add/subtract 1
+      updown=rbinom(1,1,0.5) #p=0.5 is symmetric. If you change this, must account for asymmetric proposal
+      reject=FALSE #we auto reject if you select a detected call
+      if(updown==0){#subtract
+        #find all z's currently on
+        z.on=which(model$z[g,1:M]==1)
+        n.z.on=length(z.on)
+        pick=rcat(1,rep(1/n.z.on,n.z.on)) #select one of these individuals
+        pick=z.on[pick]
+        #prereject turning off individuals currently allocated samples
+        if(model$capcounts[g,pick]>0){#is this an individual with samples?
+          reject=TRUE
+        }
+        if(!reject){
+          #get initial logprobs for N and y
+          lp.initial.N <- model$getLogProb(N.node)
+          lp.initial.y <- model$getLogProb(y.nodes[pick])
+          
+          #propose new N/z
+          model$N[g] <<-  model$N[g] - 1
+          model$z[g,pick] <<- 0
+          
+          #turn lam off
+          model$calculate(lam.nodes[pick])
+          
+          #get proposed logprobs for N and y
+          lp.proposed.N <- model$calculate(N.node)
+          lp.proposed.y <- model$calculate(y.nodes[pick]) #will always be 0
+          
+          #MH step
+          log_MH_ratio <- (lp.proposed.N + lp.proposed.y) - (lp.initial.N + lp.initial.y)
+          accept <- decide(log_MH_ratio)
+          
+          if(accept) {
+            mvSaved["N",1][g] <<- model[["N"]][g]
+            for(j in 1:J){
+              mvSaved["lam",1][g,pick,j] <<- model[["lam"]][g,pick,j]
+            }
+            mvSaved["z",1][g,pick] <<- model[["z"]][g,pick]
+          }else{
+            model[["N"]][g] <<- mvSaved["N",1][g]
+            for(j in 1:J){
+              model[["lam"]][g,pick,j] <<- mvSaved["lam",1][g,pick,j]
+            }
+            model[["z"]][g,pick] <<- mvSaved["z",1][g,pick]
+            model$calculate(y.nodes[pick])
+            model$calculate(N.node)
+          }
+        }
+      }else{#add
+        if(model$N[g] < M){ #cannot update if z maxed out. Need to raise M
+          z.off=which(model$z[g,1:M]==0)
+          n.z.off=length(z.off)
+          pick=rcat(1,rep(1/n.z.off,n.z.off)) #select one of these individuals
+          pick=z.off[pick]
+          
+          #get initial logprobs for N and y
+          lp.initial.N <- model$getLogProb(N.node)
+          lp.initial.y <- model$getLogProb(y.nodes[pick]) #will always be 0
+          
+          #propose new N/z
+          model$N[g] <<-  model$N[g] + 1
+          model$z[g,pick] <<- 1
+          
+          #turn lam on
+          model$calculate(lam.nodes[pick])
+          
+          #get proposed logprobs for N and y
+          lp.proposed.N <- model$calculate(N.node)
+          lp.proposed.y <- model$calculate(y.nodes[pick])
+          
+          #MH step
+          log_MH_ratio <- (lp.proposed.N + lp.proposed.y) - (lp.initial.N + lp.initial.y)
+          accept <- decide(log_MH_ratio)
+          if(accept) {
+            mvSaved["N",1][g] <<- model[["N"]][g]
+            for(j in 1:J){
+              mvSaved["lam",1][g,pick,j] <<- model[["lam"]][g,pick,j]
+            }
+            mvSaved["z",1][g,pick] <<- model[["z"]][g,pick]
+          }else{
+            model[["N"]][g] <<- mvSaved["N",1][g]
+            for(j in 1:J){
+              model[["lam"]][g,pick,j] <<- mvSaved["lam",1][g,pick,j]
+            }
+            model[["z"]][g,pick] <<- mvSaved["z",1][g,pick]
+            model$calculate(y.nodes[pick])
+            model$calculate(N.node)
+          }
+        }
+      }
+    }
+    #copy back to mySaved to update logProbs which was not done above
     copy(from = model, to = mvSaved, row = 1, nodes = calcNodes, logProb = TRUE)
   },
   methods = list( reset = function () {} )

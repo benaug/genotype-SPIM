@@ -224,16 +224,31 @@ conf$addSampler(target = paste0("y.true[1:",M,",1:",J,"]"),
 
 #replace default G.true sampler, which is not correct, with custom sampler for G.true, "GSampler"
 conf$removeSampler("G.true")
-for(i in 1:M){
-  for(m in 1:n.cov.use){ #don't need to update first cat bc it is mark status
-    conf$addSampler(target = paste("G.true[",i,",",m,"]", sep=""),
-                    type = 'GSampler',
-                    control = list(i = i,m=m,n.levels=n.levels,n.rep=n.rep.use,
-                                   na.ind=nimbuild$G.obs.NA.indicator[,m,]), silent = TRUE)
-  }
-}
+# # this is the "safe" version. It will use a lot of RAM, but will be correct if any parameters
+# # depend on G.true besides G.obs, which seems unlikely for genotypes. But if, say, G.true[,1] is "sex", and
+# # you specify that sigma varies by sex, this update is correct and the more efficient one below will not be.
+# for(i in 1:M){
+#   for(m in 1:n.cov.use){
+#     conf$addSampler(target = paste("G.true[",i,",",m,"]", sep=""),
+#                     type = 'GSampler',
+#                     control = list(i = i,m=m,n.levels=n.levels,n.rep=n.rep.use,
+#                                    na.ind=nimbuild$G.obs.NA.indicator[,m,]), silent = TRUE)
+#   }
+# }
+#this is the low RAM version. No parameters can depend on G.true except G.obs
+#identify G.true nodes here. Must be in matrix with individuals down rows and loci across columns.
+#This update only works with "reps" vectorized in bugs code. Must modify this sampler if you unvectorize those.
+G.true.nodes <- Rmodel$expandNodeNames(paste0("G.true[1:",M,",1:",n.cov.use,"]"))
+G.obs.nodes <- Rmodel$expandNodeNames(paste0("G.obs[1:",M,",1:",n.cov.use,",1:",n.rep.use,"]"))
+calcNodes <- c(G.true.nodes,G.obs.nodes)
+conf$addSampler(target = paste0("G.true[1:",M,",1:",n.cov.use,"]"),
+                type = 'GSampler2',
+                control = list(M =M, n.cov=n.cov.use,n.levels=n.levels,n.rep=n.rep.use,
+                               na.ind=nimbuild$G.obs.NA.indicator,n.samples=nimbuild$n.samples,
+                               G.true.nodes=G.true.nodes,G.obs.nodes=G.obs.nodes,
+                               calcNodes=calcNodes), silent = TRUE)
 
-# ###Two *optional* sampler replacements:
+#*optional* sampler replacements:
 #replace default activity center sampler that updates x and y locations separately with a joint update
 #should be a little more efficient. Could use AFslice or block random walk.
 #BUT! I suggest using "sSampler", which is a RW block update for the x and y locs with no covariance,
@@ -248,18 +263,9 @@ for(i in 1:M){
   # conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
   #                 type = 'RW_block',control=list(adaptive=TRUE,adaptScaleOnly=TRUE,adaptInterval=250),silent = TRUE)
   conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
-                  type = 'sSampler',control=list(i=i,xlim=nimbuild$xlim,ylim=nimbuild$ylim,scale=0.25),silent = TRUE)
+                  type = 'sSampler',control=list(i=i,xlim=nimbuild$xlim,ylim=nimbuild$ylim,scale=1),silent = TRUE)
   #scale parameter here is just the starting scale. It will be tuned.
 }
-
-#block update for lam0 and sigma helps when data sparse enough to cause correlated posteriors. 
-#Slice seems more efficient that RW_block, but slower and may depend on data sparsity
-#If including covariate effects on lam0 or sigma, maybe start with default samplers and see
-#which parameters' posteriors are correlated before deciding what, if anything, to block.
-#could add theta.d here...
-conf$removeSampler(c("lam0","sigma"))
-conf$addSampler(target = c(paste("lam0"),paste("sigma")),
-                type = 'AF_slice',control = list(adaptive=TRUE),silent = TRUE)
 
 # Build and compile
 Rmcmc <- buildMCMC(conf)
@@ -287,6 +293,7 @@ data$n #number of individuals captured to compare to posterior for n. No uncerta
 
 ##Explore ID posteriors
 #Assuming ID posterior was monitored in mvSamples2
+nrow(mvSamples2) #Need enough posterior iterations for reliable inference. If not, reduce thinning and/or run longer
 mvSamples2 = as.matrix(Cmcmc$mvSamples2)
 idx=grep("ID",colnames(mvSamples2))
 plot(mcmc(mvSamples2[2:nrow(mvSamples2),idx]))

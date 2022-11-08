@@ -174,7 +174,7 @@ sim.genoSPIM.sampType <-
     this.j=tmp[,1]
     this.k=tmp[,2]
     
-    out=list(y=y,this.j=this.j,this.k=this.k,G.true=G.true,G.obs=G.error,n.cov=n.cov,n.levels=n.levels,
+    out=list(y=y,this.j=this.j,this.k=this.k,G.true=G.true,G.obs=G.error,n.cov=n.cov,n.levels=n.levels,n.rep=n.rep,
              n.samples=length(this.j),IDlist=list(n.cov=n.cov,IDcovs=IDcovs,ptype=ptype),
              ID=ID,X=X,K=K,buff=buff,s=s,n=nrow(y),corrupted=corrupted,G.Obstype=G.Obstype,obstype=obstype,
              samp.type=samp.type)

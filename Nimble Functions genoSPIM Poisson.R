@@ -1,7 +1,3 @@
-###################################################################
-# Custom nimbleFunctions to fit a categorical SPIM
-###################################################################
-
 #------------------------------------------------------------------
 # Function for calculation detection rate
 #------------------------------------------------------------------
@@ -175,13 +171,13 @@ GSampler <- nimbleFunction(
       G.probs=G.probs/sum(G.probs)
     }
     #MH step
-    model.lp.initial <- model$getLogProb(calcNodes) #initial logProb
+    G.true.lp.initial <- model$getLogProb(calcNodes) #initial logProb
     prop.back <- G.probs[model$G.true[i,m]] #backwards proposal prob
     G.prop <- rcat(1,G.probs[1:n.levels[m]])
     prop.for <- G.probs[G.prop] #forwards proposal prob
     model$G.true[i,m] <<- G.prop #store in model
-    model.lp.proposed <- model$calculate(calcNodes)#proposed logProb
-    log_MH_ratio <- (model.lp.proposed+log(prop.back)) - (model.lp.initial+log(prop.for))
+    G.true.lp.proposed <- model$calculate(calcNodes)#proposed logProb
+    log_MH_ratio <- (G.true.lp.proposed+log(prop.back)) - (G.true.lp.initial+log(prop.for))
     # log_MH_ratio
     accept <- decide(log_MH_ratio)
     if(accept) {
@@ -193,6 +189,93 @@ GSampler <- nimbleFunction(
   methods = list( reset = function () {} )
 )
 
+#Alternative G.true sampler that uses much less RAM and is faster.
+#However! No parameters other than G.obs can depend on G.true with this
+#version unless you add their likelihoods to the MH update.
+GSampler2 <- nimbleFunction(
+  contains = sampler_BASE,
+  setup = function(model, mvSaved, target, control) {
+    # Defined stuff
+    M <- control$M
+    n.cov <- control$n.cov
+    n.levels <- control$n.levels
+    n.samples <- control$n.samples
+    n.rep <- control$n.rep
+    na.ind <- control$na.ind
+    G.true.nodes <- control$G.true.nodes
+    G.obs.nodes <- control$G.obs.nodes
+    calcNodes <- control$calcNodes
+  },
+  run = function() {
+    node.idx=1 #this is used to keep up with the correct nodes in G.true.nodes which MUST BE 1D, for each i and m
+    #must loop over loci first, then individuals for this to work correctly.
+    G.obs <- model$G.obs
+    for(m in 1:n.cov){
+      G.obs.m.idx=seq((m-1)*n.samples+1,(m-1)*n.samples+n.samples,1) #get index for cov m for all samples
+      for(i in 1:M){
+        G.probs=model$gammaMat[m,1:n.levels[m]] #pull out genotype frequencies
+        if(model$G.latent[i,m]==FALSE){ #these individual-loci have samples allocated to them currently
+          #must use MH
+          #build proposal distribution using genotype frequency likelihood and classification likelihood.
+          these.samps=which(model$ID==i)
+          G.obs.idx=G.obs.m.idx[these.samps] #pull out nodes for these samples at cov m
+          n.these.samps=length(these.samps)
+          error.probs=rep(1,n.levels[m]) #error probs|category level
+          for(i2 in 1:n.these.samps){
+            for(obs in 1:n.rep){
+              if(na.ind[these.samps[i2],m,obs]==FALSE){ #if observed
+                error.probs=error.probs*model$theta[m,1:n.levels[m],G.obs[these.samps[i2],m,obs]]
+              }
+            }
+          }
+          G.probs=G.probs*error.probs
+          G.probs=G.probs/sum(G.probs)
+          #MH step
+          G.true.lp.initial <- model$getLogProb(G.true.nodes[node.idx]) #initial logProb for G.true
+          G.obs.lp.initial <- model$getLogProb(G.obs.nodes[G.obs.idx]) #initial logProb for G.obs
+          prop.back <- G.probs[model$G.true[i,m]] #backwards proposal prob
+          G.prop <- rcat(1,G.probs[1:n.levels[m]]) #proposal
+          
+          G.init <- model$G.true[i,m] #used for debugging, delete later
+
+          if(G.prop!=model$G.true[i,m]){ #we can skip this if we propose the current value
+            prop.for <- G.probs[G.prop] #forwards proposal prob
+            model$G.true[i,m] <<- G.prop #store in model
+            G.true.lp.proposed <- model$calculate(G.true.nodes[node.idx])#proposed logProb for G.true
+            G.obs.lp.proposed <- model$calculate(G.obs.nodes[G.obs.idx])#proposed logProb for G.true
+            log_MH_ratio <- (G.true.lp.proposed+G.obs.lp.proposed+log(prop.back)) - 
+              (G.true.lp.initial+G.obs.lp.initial+log(prop.for))
+            # log_MH_ratio
+            
+            
+            # browser()
+            
+            accept <- decide(log_MH_ratio)
+            if(accept) {
+              mvSaved["G.true",1][i,m] <<- model[["G.true"]][i,m] #move to mvSaved
+            } else {
+              model[["G.true"]][i,m] <<- mvSaved["G.true",1][i,m] #set back to init
+              model$calculate(G.true.nodes[node.idx]) #set log prob back to init
+              model$calculate(G.obs.nodes[G.obs.idx]) #set log prob back to init
+            }
+          }
+        }else{ #these individual-loci do not have samples allocated to them currently
+          #build proposal distribution using only genotype frequency likelihood. This is the
+          #full conditional if no other parameters depend on G.true. So always accept
+          G.probs=G.probs/sum(G.probs)
+          G.prop <- rcat(1,G.probs[1:n.levels[m]])
+          model$G.true[i,m] <<- G.prop #store in model
+          model$calculate(G.true.nodes[node.idx]) #update G.true logprob. No G.obs logprob.
+          mvSaved["G.true",1][i,m] <<- model[["G.true"]][i,m]
+        }
+        node.idx=node.idx+1 #increment
+      }
+    }
+    #copy back to mySaved to update logProbs. should be done above, already though.
+    copy(from = model, to = mvSaved, row = 1, nodes = calcNodes, logProb = TRUE)
+  },
+  methods = list( reset = function () {} )
+)
 
 
 #------------------------------------------------------------------
@@ -315,7 +398,7 @@ IDSampler <- nimbleFunction(
     model$y.true <<- y.true
     model$ID <<- ID.curr
     model$G.latent <<- G.latent
-    # model.lp.proposed <-
+    # G.true.lp.proposed <-
     model$calculate(calcNodes) #update dependencies, likelihoods
     copy(from = model, to = mvSaved, row = 1, nodes = calcNodes, logProb = TRUE)
   },
