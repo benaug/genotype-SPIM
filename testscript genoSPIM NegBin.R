@@ -8,9 +8,10 @@ source("NimbleModel genoSPIM Negbin.R")
 source("Nimble Functions genoSPIM Negbin.R")
 source("sSampler.R")
 
-#make sure to run this line or the MCMC sampler will not work!
-nimble:::setNimbleOption('MCMCjointlySamplePredictiveBranches', FALSE)
-nimbleOptions('MCMCjointlySamplePredictiveBranches') 
+#If using Nimble version 0.13.1 and you must run this line 
+nimbleOptions(determinePredictiveNodesInModel = FALSE)
+# #If using Nimble before version 0.13.1, run this line instead
+# nimble:::setNimbleOption('MCMCjointlySamplePredictiveBranches', FALSE)
 
 #We will use the fisher data set parameter estimates from Augustine et al. (2020)
 #to specify the genetic portion of the simulation settings
@@ -24,11 +25,11 @@ str(unique.genos)
 #e.g. 152-152 is 1, 152-154 is 2, 152-156 is 3, etc.
 unique.genos[[1]] #1st loci
 
-n.levels=unlist(lapply(unique.genos,nrow)) #how many loci-level genotypes per locus?
+n.levels <- unlist(lapply(unique.genos,nrow)) #how many loci-level genotypes per locus?
 
 #This function creates objects to determine which classifications are 1) correct, 2) false allele, and 3) allelic dropout
-built.genos=build.genos(unique.genos)
-ptype=built.genos$ptype #list of length n.cov with each element being an n.levels[m] x n.levels[m] matrix contianing 
+built.genos <- build.genos(unique.genos)
+ptype <- built.genos$ptype #list of length n.cov with each element being an n.levels[m] x n.levels[m] matrix contianing 
 #indicator for error type for true genotypes along rows and classified genotype along columns
 #note, "ptype" in list form is used in the data simulator, but ptypeArray is a ragged array used in nimble
 
@@ -69,16 +70,16 @@ str(gammameans)
 #Now we have the information required to simulate a data set similar to the fisher data set
 
 #First, let's decide how many loci to use
-n.cov=9
+n.cov <- 9
 #discard unused information if you don't use them all
 if(n.cov!=9){
   for(i in 9:(n.cov+1)){
-    gammameans[[i]]=NULL
-    unique.genos[[i]]=NULL
-    ptype[[i]]=NULL
+    gammameans[[i]] <- NULL
+    unique.genos[[i]] <- NULL
+    ptype[[i]] <- NULL
   }
 }
-n.levels=unlist(lapply(unique.genos,nrow)) #update n.levels in case some discarded
+n.levels <- unlist(lapply(unique.genos,nrow)) #update n.levels in case some discarded
 #now all lists of length "n.cov"
 str(gammameans)
 str(unique.genos)
@@ -86,30 +87,30 @@ str(ptype)
 n.levels
 
 #Normal SCR stuff
-N=78
-lam0=0.25
-theta.d=0.01 # negative binomial dispersion parameter. Lower is more dispersion
-sigma=0.50
-K=10 #number of capture occasoins
-buff=3 #state space buffer. Should be at least 3 sigma.
-X<- expand.grid(3:11,3:11) #trapping array
-n.rep=2 #number of PCR reps per sample.
+N <- 78
+lam0 <- 0.25
+theta.d <- 0.01 # negative binomial dispersion parameter. Lower is more dispersion
+sigma <- 0.50
+K <- 10 #number of capture occasoins
+buff <- 3 #state space buffer. Should be at least 3 sigma.
+X <- expand.grid(3:11,3:11) #trapping array
+n.rep <- 2 #number of PCR reps per sample.
 
-IDcovs=vector("list",n.cov)
+IDcovs <- vector("list",n.cov)
 for(i in 1:n.cov){
-  IDcovs[[i]]=1:nrow(unique.genos[[i]])
+  IDcovs[[i]] <- 1:nrow(unique.genos[[i]])
 }
 gamma=vector("list",n.cov)
 for(i in 1:n.cov){
-  # gamma[[i]]=rep(1/n.levels[i],n.levels[i]) #This simulates equal genotype frequencies
-  gamma[[i]]=gammameans[[i]] #This uses the frequencies estimated from fisher data set
+  # gamma[[i]] <- rep(1/n.levels[i],n.levels[i]) #This simulates equal genotype frequencies
+  gamma[[i]] <- gammameans[[i]] #This uses the frequencies estimated from fisher data set
 }
-pID=rep(1,n.cov) #loci-level sample by replication amplification probabilities (controls level of missing scores)
-p.geno.het=c(0.85,0.149,0.001) #P(correct, allelic dropout,false allele) for heterozygotes (using fisher ests here)
-p.geno.hom=c(0.999,0.001) #P(correct,false allele) for homozygotes
+pID <- rep(1,n.cov) #loci-level sample by replication amplification probabilities (controls level of missing scores)
+p.geno.het <- c(0.85,0.149,0.001) #P(correct, allelic dropout,false allele) for heterozygotes (using fisher ests here)
+p.geno.hom <- c(0.999,0.001) #P(correct,false allele) for homozygotes
 
 
-data=sim.genoSPIM(N=N,lam0=lam0,theta.d=theta.d,sigma=sigma,K=K,X=X,buff=buff,#cap-recap parms
+data <- sim.genoSPIM(N=N,lam0=lam0,theta.d=theta.d,sigma=sigma,K=K,X=X,buff=buff,#cap-recap parms
                   obstype="negbin",
                   n.cov=n.cov,pID=pID,n.rep=n.rep,
                   p.geno.hom=p.geno.hom,p.geno.het=p.geno.het,
@@ -130,12 +131,12 @@ head(data$this.k)
 t(data$G.obs[1,,]) #observed genotypes for 1st count member
 
 #Can use the map function to see which genotypes the enumerated genotypes correspond to
-ind=1 #change ind number ot look at different individuals
+ind <- 1 #change ind number ot look at different individuals
 data$G.true[ind,] #True genotype of individual 1, enumerated
 map.genos(data$G.true[ind,],unique.genos) #converted back to actual genotypes
 #can compare observed genotypes to true genotypes above
 #allelic dropout events are when heterozygotes are observed as homozygotes. false allele is any other error.
-these.samps=which(data$ID==ind)
+these.samps <- which(data$ID==ind)
 for(i in 1:length(these.samps)){
   print(map.genos(t(data$G.obs[these.samps[i],,]),unique.genos))
 }
@@ -143,39 +144,39 @@ for(i in 1:length(these.samps)){
 ##Structure simulated data for nimble
 
 #Data augmentation level
-M=175
-J=nrow(X)
-K1D=rep(K,J) #trap operation matrix, number of occasions trap j is operable
-data$K1D=K1D #add to data object to build data below
+M <- 175
+J <- nrow(X)
+K1D <- rep(K,J) #trap operation matrix, number of occasions trap j is operable
+data$K1D <- K1D #add to data object to build data below
 
 #set some gamma inits. Using equal across locus-level genotypes here so we don't use truth
 #note, gamma is a ragged matrix for use in nimble.
-gammaMat=matrix(0,nrow=n.cov,ncol=max(n.levels))
+gammaMat <- matrix(0,nrow=n.cov,ncol=max(n.levels))
 for(l in 1:n.cov){
   gammaMat[l,1:n.levels[l]]=rep(1/n.levels[l],n.levels[l])
 }
 
 #provide some ballpark inits to initialize latent variables and other data structures
-inits=list(lam0=1,sigma=1,theta.d=0.5,gammaMat=gammaMat,p.geno.het=c(0.95,0.025,0.025),p.geno.hom=c(0.95,0.05)) #plug in some ballpark estimates to initialize data
-nimbuild=init.data.negbin(data=data,M=M,inits=inits)
+inits <- list(lam0=1,sigma=1,theta.d=0.5,gammaMat=gammaMat,p.geno.het=c(0.95,0.025,0.025),p.geno.hom=c(0.95,0.05)) #plug in some ballpark estimates to initialize data
+nimbuild <- init.data.negbin(data=data,M=M,inits=inits)
 
 #book keeping for case where n.rep=1, or n.cov=1
 #nimble does not like structures with any dimensions of 1. Padding the structures
 #in this case lets us use the same code no matter the dimensions.
 if(n.rep==1){
-  n.rep.use=2
+  n.rep.use <- 2
 }else{
-  n.rep.use=n.rep
+  n.rep.use <- n.rep
 }
 if(n.cov==1){
-  n.cov.use=2
+  n.cov.use <- 2
 }else{
-  n.cov.use=n.cov
+  n.cov.use <- n.cov
 }
 n.samples=data$n.samples
 
 #We can't use a list (easily) in nimble, so we use a ragged array instead
-ptypeArray = built.genos$ptypeArray
+ptypeArray <- built.genos$ptypeArray
 
 #inits for nimble
 Niminits <- list(z=rep(1,M),s=nimbuild$s,G.true=nimbuild$G.true,ID=nimbuild$ID,capcounts=rowSums(nimbuild$y.true),
@@ -183,29 +184,31 @@ Niminits <- list(z=rep(1,M),s=nimbuild$s,G.true=nimbuild$G.true,ID=nimbuild$ID,c
                  lam0=inits$lam0,sigma=inits$sigma,theta.d=inits$theta.d)
 
 #constants for Nimble
-J=nrow(data$X)
-constants<-list(M=M,J=J,K=data$K,K1D=K1D,n.samples=n.samples,n.cov=n.cov.use,n.rep=n.rep.use,
+J <- nrow(data$X)
+constants <- list(M=M,J=J,K1D=K1D,n.samples=n.samples,n.cov=n.cov.use,n.rep=n.rep.use,
                 xlim=nimbuild$xlim,ylim=nimbuild$ylim,na.ind=nimbuild$G.obs.NA.indicator,
                 n.levels=n.levels,max.levels=max(n.levels),ptype=built.genos$ptypeArray)
 
 #supply data to nimble
-Nimdata<-list(y.true=matrix(NA,nrow=M,ncol=J),G.obs=nimbuild$G.obs,
+Nimdata <- list(y.true=matrix(NA,nrow=M,ncol=J),G.obs=nimbuild$G.obs,
               G.true=matrix(NA,nrow=M,ncol=n.cov.use),ID=rep(NA,n.samples),
               z=rep(NA,M),X=as.matrix(data$X),capcounts=rep(NA,M))
 
 
 # set parameters to monitor
-parameters<-c('psi','lam0','theta.d','sigma','N','n','p.geno.het','p.geno.hom','gammaMat')
+parameters <- c('psi','lam0','theta.d','sigma','N','n','p.geno.het','p.geno.hom','gammaMat')
 
 #can also monitor a different set of parameters with a different thinning rate
 parameters2 <- c('ID',"G.true")
-nt=1 #thinning rate
-nt2=50#thin more
+nt <- 1 #thinning rate
+nt2 <- 50#thin more
 
 # Build the model, configure the mcmc, and compile
 # can ignore warnings about 1) ID in constants 2) possible size mismatch for G.obs.
-start.time<-Sys.time()
+start.time <- Sys.time()
 Rmodel <- nimbleModel(code=NimModel, constants=constants, data=Nimdata,check=FALSE,inits=Niminits)
+#can use "nodes" argument in configureMCMC below to omit y.true and G.true that are replaced below for faster
+#configuration
 conf <- configureMCMC(Rmodel,monitors=parameters, thin=nt, monitors2=parameters2,thin2=nt2,useConjugacy = TRUE) 
 
 #conf$printSamplers() #shows the samplers used for each parameter and latent variable
@@ -214,7 +217,7 @@ conf <- configureMCMC(Rmodel,monitors=parameters, thin=nt, monitors2=parameters2
 
 ##Here, we remove the default sampler for y.true
 #and replace it with the custom "IDSampler".
-conf$removeSampler("G.obs")
+conf$removeSampler("G.obs") #nimble will assign sampler here if any missing data. Remove it.
 conf$removeSampler("y.true")
 conf$addSampler(target = paste0("y.true[1:",M,",1:",J,"]"),
                 type = 'IDSampler',control = list(M=M,J=J,K1D=K1D,n.cov=n.cov.use,n.samples=n.samples,
@@ -276,31 +279,31 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 # Run the model.
 #Can ignore nimble warnings about NA or NaN in ptype and theta
 #Can ignore nimble warnings about G.obs value NA or NaN, due to padding to keep dimensions constant for nimble
-start.time2<-Sys.time()
+start.time2 <- Sys.time()
 Cmcmc$run(5000,reset=FALSE) #can extend run by rerunning this line
-end.time<-Sys.time()
+end.time <- Sys.time()
 end.time-start.time  # total time for compilation, replacing samplers, and fitting
 end.time-start.time2 # post-compilation run time
 
 library(coda)
-mvSamples = as.matrix(Cmcmc$mvSamples)
+mvSamples <- as.matrix(Cmcmc$mvSamples)
 
 #remove gammaMat posteriors (not that interesting and tons of them) and plot
-idx=grep("gammaMat",colnames(mvSamples))
+idx <- grep("gammaMat",colnames(mvSamples))
 plot(mcmc(mvSamples[200:nrow(mvSamples),-idx]))
 
 data$n #number of individuals captured to compare to posterior for n. No uncertainty with enough genotype info.
 
 ##Explore ID posteriors
 #Assuming ID posterior was monitored in mvSamples2
+mvSamples2 <- as.matrix(Cmcmc$mvSamples2)
 nrow(mvSamples2) #Need enough posterior iterations for reliable inference. If not, reduce thinning and/or run longer
-mvSamples2 = as.matrix(Cmcmc$mvSamples2)
-idx=grep("ID",colnames(mvSamples2))
+idx <- grep("ID",colnames(mvSamples2))
 plot(mcmc(mvSamples2[2:nrow(mvSamples2),idx]))
 
 library(MCMCglmm)
-burnin=50
-IDpost=round(posterior.mode(mvSamples2[burnin:nrow(mvSamples2),idx]))
+burnin <- 50
+IDpost <- round(posterior.mode(mcmc(mvSamples2[burnin:nrow(mvSamples2),idx])))
 #For simulated data sets, comparing posterior mode ID to truth.
 #Numbers will not be the same, but all samples with same true ID will have
 #same ID in posterior mode when posterior mode is exactly correct. Numbers just don't match up.
@@ -308,45 +311,45 @@ cbind(data$ID,round(IDpost))
 
 #calculate posterior probability of pairwise sample matches
 #P(sample x belongs to same individual as sample y)
-burnin=50 #where to start. Don't start at 1, is NA.
-n.iter=nrow(mvSamples2)-burnin+1
-pair.probs=matrix(NA,n.samples,n.samples)
+burnin <- 50 #where to start. Don't start at 1, is NA.
+n.iter <- nrow(mvSamples2)-burnin+1
+pair.probs <- matrix(NA,n.samples,n.samples)
 for(i in 1:n.samples){
   for(j in 1:n.samples){
-    count=0
+    count <- 0
     for(iter in burnin:n.iter){
-      count=count+1*(mvSamples2[iter,idx[j]]==mvSamples2[iter,idx[i]])
+      count <- count+1*(mvSamples2[iter,idx[j]]==mvSamples2[iter,idx[i]])
     }
-    pair.probs[i,j]=count/(n.iter-burnin+1)
+    pair.probs[i,j] <- count/(n.iter-burnin+1)
   }
 }
 
-this.samp=1 #sample number to look at
+this.samp <- 1 #sample number to look at
 pair.probs[this.samp,] #probability this sample is from same individual as all other samples
 pair.probs[this.samp,data$ID==data$ID[this.samp]] #for simulated data, these are the other samples truly from same individual
 
 #inspect G.true (true genotype) posteriors
-idx=grep("G.true",colnames(mvSamples2))
+idx <- grep("G.true",colnames(mvSamples2))
 
 #posterior mode of true genotypes. Note, this is the posterior mode of each loci individually
 #I expect this should usually be the same at the posterior mode complete genotype, but this
 #can also be calculated from this posterior
 library(MCMCglmm)
-burnin=50
-G.mode=round(posterior.mode(mvSamples2[burnin:nrow(mvSamples2),idx]))
-G.mode=matrix(G.mode,nrow=M)
+burnin <- 50
+G.mode <- round(posterior.mode(mcmc(mvSamples2[burnin:nrow(mvSamples2),idx])))
+G.mode <- matrix(G.mode,nrow=M)
 #rearrange all G.true samples to look at range of values instead of just the mode
-G.samps=mvSamples2[burnin:nrow(mvSamples2),idx]
-G.samps=array(t(G.samps),dim=c(M,n.cov,nrow(G.samps)))
+G.samps <- mvSamples2[burnin:nrow(mvSamples2),idx]
+G.samps <- array(t(G.samps),dim=c(M,n.cov,nrow(G.samps)))
 
 #look at posterior mode genotype of each individual (not numbered the same as in true data,
 #but numbers are the same as in IDpost)
-ind=1 #change ind number to look at different individuals
+ind <- 1 #change ind number to look at different individuals
 G.mode[ind,] #True genotype of focal individual, enumerated
 map.genos(G.mode[ind,],unique.genos) #converted back to actual genotypes
 
 #which samples were most commonly assigned to this individual? (assumes you calculated IDpost above)
-these.samps=which(IDpost==ind)
+these.samps <- which(IDpost==ind)
 if(length(these.samps>0)){
   for(i in 1:length(these.samps)){
     print(map.genos(t(data$G.obs[these.samps[i],,]),unique.genos))
@@ -360,7 +363,7 @@ if(length(these.samps>0)){
 #estimated true genotypes while individuals without samples strongly linked
 #will have very imprecisely estimated true genotypes. If no samples ever allocate,
 #you are just drawing true genotypes from the estimated population-level genotype frequencies
-out=t(apply(G.samps[ind,,],2,FUN=map.genos,unique.genos))
+out <- t(apply(G.samps[ind,,],2,FUN=map.genos,unique.genos))
 head(out,10)
 
 loci=1
