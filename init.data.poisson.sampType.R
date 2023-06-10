@@ -40,12 +40,13 @@ init.data.poisson.sampType=function(data=NA,M=NA,inits=inits){
   
   samp.levels=sort(unique(samp.type))
   n.samp.levels=length(samp.levels)
-  if(ncol(p.geno.het)!=3)stop("p.geno.het init must have 3 columns")
+  if(ncol(p.geno.het)!=3)warning("p.geno.het init must be of length 3 unless using SNPs")
   if(ncol(p.geno.hom)!=2)stop("p.geno.hom init must have 2 columns")
   if(nrow(p.geno.het)!=n.samp.levels)stop("p.geno.het init must have n.samp.levels rows")
   if(nrow(p.geno.hom)!=n.samp.levels)stop("p.geno.hom init must have n.samp.levels rows")
   if(!all(rowSums(p.geno.het)==1))stop("p.geno.het rows must sum to 1.")
   if(!all(rowSums(p.geno.hom)==1))stop("p.geno.hom rows must sum to 1.")
+  
   
   #initialize G.obs.true, the true sample-level full categorical identities
   #initializing to the most commonly observed sample by category values across observers
@@ -85,7 +86,10 @@ init.data.poisson.sampType=function(data=NA,M=NA,inits=inits){
         }else{
           thetaArray[m,sl,l,which(ptype[[m]][l,]==1)]=(p.geno.het[sl,1])
           thetaArray[m,sl,l,which(ptype[[m]][l,]==2)]=(p.geno.het[sl,2])*(1/sum(ptype[[m]][l,]==2))
-          thetaArray[m,sl,l,which(ptype[[m]][l,]==3)]=(p.geno.het[sl,3])*(1/sum(ptype[[m]][l,]==3))
+          idx=which(ptype[[m]][l,]==3) #SNPs won't have these
+          if(length(idx)>0){
+            thetaArray[m,sl,l,idx]=(p.geno.het[sl,3])*(1/sum(ptype[[m]][l,]==3))
+          }
         }
       }
     }

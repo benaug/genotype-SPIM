@@ -12,4 +12,6 @@ DISCLAIMER: There was been a bug before 2/17/2022 in the G.true update. It has b
 
 Update: A second G.true sampler was added 11/8/2022. It uses less RAM and runs faster. This should allow gSPIM to be applied to larger data sets. I tested this new G.true sampler in both the single and multisession models with Poisson observation model and sample type covariates.
 
+Update: Original model structure was not appropriate for SNPs because a true heterozygote cannot have a false allele event as can happen for microsats. Further, the dimensions of "theta" can be reduced massively for SNPs when you don't consider locus-level error rates. This will use less RAM and run faster. I added 2 testscripts set up for SNPs on 6/10/23.
+
 Final Disclaimer: This is a complex model and the code to format objects for nimble/custom distributions/custom updates etc. are complicated. Modify the model at your own risk or alternatively, send me an email and I may have time to assist.

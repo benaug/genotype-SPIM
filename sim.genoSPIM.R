@@ -17,7 +17,7 @@ sim.genoSPIM <-
     if(sum(p.geno.hom)!=1)stop("p.geno.hom must sum to 1")
     if(sum(p.geno.het)!=1)stop("p.geno.het must sum to 1")
     if(length(p.geno.hom)!=2)stop("p.geno.hom must be of length 2")
-    if(length(p.geno.het)!=3)stop("p.geno.hom must be of length 3")
+    if(length(p.geno.het)!=3)warning("p.geno.het must be of length 3 unless simulating SNPs")
     
     # simulate a population of activity centers
     s<- cbind(runif(N, min(X[,1])-buff,max(X[,1])+buff), runif(N,min(X[,2])-buff,max(X[,2])+buff))

@@ -36,7 +36,7 @@ init.data.poisson=function(data=NA,M=NA,inits=inits){
   p.geno.het=inits$p.geno.het
   p.geno.hom=inits$p.geno.hom
   
-  if(length(p.geno.het)!=3)stop("p.geno.het init must be of length 3")
+  if(length(p.geno.het)!=3)warning("p.geno.het init must be of length 3 unless using SNPs")
   if(length(p.geno.hom)!=2)stop("p.geno.hom init must be of length 2")
   if(sum(p.geno.het)!=1)stop("p.geno.het init must sum to 1")
   if(sum(p.geno.hom)!=1)stop("p.geno.hom init must sum to 1")

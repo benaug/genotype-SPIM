@@ -19,7 +19,7 @@ sim.genoSPIM.sampType <-
       if(sum(p.geno.hom[[i]])!=1)stop("p.geno.hom must sum to 1 for each sampType")
       if(sum(p.geno.het[[i]])!=1)stop("p.geno.het must sum to 1 for each sampType")
       if(length(p.geno.hom[[i]])!=2)stop("p.geno.hom must be of length 2 for each sampType")
-      if(length(p.geno.het[[i]])!=3)stop("p.geno.hom must be of length 3 for each sampType")
+      if(length(p.geno.het[[i]])!=3)warning("p.geno.het must be of length 3 unless simulating SNPs")
     }
     if(length(pID)!=samp.levels)stop("pID must be of length samp.levels")
     
