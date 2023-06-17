@@ -12,7 +12,7 @@ source("build.genos.R")
 source("init.data.poisson.R")
 source("map.genos.R")
 source("NimbleModel genoSPIM Poisson SNP ThetaCovs.R")
-source("Nimble Functions genoSPIM Poisson SNP.R")
+source("Nimble Functions genoSPIM Poisson SNP ThetaCovs.R")
 source("sSampler.R")
 
 #If using Nimble version 0.13.1 and you must run this line 
