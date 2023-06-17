@@ -154,7 +154,7 @@ GSampler <- nimbleFunction(
       for(i2 in 1:length(these.samps)){
         for(obs in 1:n.rep){
           if(na.ind[these.samps[i2],obs]==FALSE){ #if observed
-            error.probs=error.probs*model$theta[1:3,G.obs[these.samps[i2],m,obs]]
+            error.probs=error.probs*model$theta[these.samps[i2],1:3,G.obs[these.samps[i2],m,obs]]
           }
         }
       }
@@ -218,7 +218,7 @@ GSampler2 <- nimbleFunction(
           for(i2 in 1:n.these.samps){
             for(obs in 1:n.rep){
               if(na.ind[these.samps[i2],m,obs]==FALSE){ #if observed
-                error.probs=error.probs*model$theta[1:3,G.obs[these.samps[i2],m,obs]]
+                error.probs=error.probs*model$theta[these.samps[i2],1:3,G.obs[these.samps[i2],m,obs]]
               }
             }
           }
@@ -231,7 +231,7 @@ GSampler2 <- nimbleFunction(
           G.prop <- rcat(1,G.probs[1:3]) #proposal
           
           G.init <- model$G.true[i,m] #used for debugging, delete later
-          
+
           if(G.prop!=model$G.true[i,m]){ #we can skip this if we propose the current value
             prop.for <- G.probs[G.prop] #forwards proposal prob
             model$G.true[i,m] <<- G.prop #store in model
@@ -309,13 +309,13 @@ IDSampler <- nimbleFunction(
       for(m in 1:n.cov){
         for(rep in 1:n.rep){
           if(na.ind[l,m,rep]==FALSE){
-            ll.theta[l,m,rep]=dcat(G.obs[l,m,rep],theta[G.true[ID.curr[l],m],1:3],log=TRUE)
+            ll.theta[l,m,rep]=dcat(G.obs[l,m,rep],theta[l,G.true[ID.curr[l],m],1:3],log=TRUE)
           }
         }
       }
     }
     ll.theta.cand=ll.theta
-    
+
     for(l in 1:n.samples){
       y.cand=y.true #necessary for every sample for correct proposal probs
       #proposal distribution is combination of distance-based and genotype-based distributions
@@ -327,7 +327,7 @@ IDSampler <- nimbleFunction(
           for(m in 1:n.cov){
             for(rep in 1:n.rep){
               if(na.ind[l,m,rep]==FALSE){ #if observed
-                G.probs[i]=G.probs[i]*theta[G.true[i,m],G.obs[l,m,rep]]
+                G.probs[i]=G.probs[i]*theta[l,G.true[i,m],G.obs[l,m,rep]]
               }
             }
           }
@@ -345,21 +345,21 @@ IDSampler <- nimbleFunction(
         swapped=c(ID.curr[l],ID.cand[l])#order swap.out then swap.in
         propprob=total.probs[swapped[2]]
         backprob=total.probs[swapped[1]]
-        
+
         #update y.true
         y.cand[ID.curr[l],this.j[l]]=y.true[ID.curr[l],this.j[l]]-1
         y.cand[ID.cand[l],this.j[l]]=y.true[ID.cand[l],this.j[l]]+1
         focalprob=(sum(ID.curr==ID.curr[l])/n.samples)*(y.true[ID.curr[l],this.j[l]]/sum(y.true[ID.curr[l],]))
         focalbackprob=(sum(ID.cand==ID.cand[l])/n.samples)*(y.cand[ID.cand[l],this.j[l]]/sum(y.cand[ID.cand[l],]))
-        
+
         ##update ll.y
         ll.y.cand[swapped,this.j[l]]=dpois(y.cand[swapped,this.j[l]],K1D[this.j[l]]*model$lam[swapped,this.j[l]],log=TRUE)
-        
+
         #update ll.theta
         for(m in 1:n.cov){
           for(rep in 1:n.rep){
             if(na.ind[l,m,rep]==FALSE){
-              ll.theta.cand[l,m,rep]=dcat(G.obs[l,m,rep],theta[G.true[ID.cand[l],m],1:3],log=TRUE)
+              ll.theta.cand[l,m,rep]=dcat(G.obs[l,m,rep],theta[l,G.true[ID.cand[l],m],1:3],log=TRUE)
             }else{
               ll.theta.cand[l,m,rep]=0
             }

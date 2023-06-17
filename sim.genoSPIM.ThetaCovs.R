@@ -4,9 +4,12 @@ e2dist = function (x, y){
   matrix(dvec, nrow = nrow(x), ncol = nrow(y), byrow = F)
 }
 
-sim.genoSPIM <-
-  function(N=NA,lam0=NA,sigma=NA,theta.d=NA,K=NA,p.geno.het=NA,
-           p.geno.hom=NA,X=NA,buff=NA,n.cov=NA,n.rep=NA,
+#simulates genotyping error rates as function of 1 continuous covariate
+
+sim.genoSPIM.ThetaCovs <-
+  function(N=NA,lam0=NA,sigma=NA,theta.d=NA,K=NA,alpha0.het=NA,
+           alpha1.het=NA,alpha0.hom=NA,alpha1.hom=NA,
+           X=NA,buff=NA,n.cov=NA,n.rep=NA,
            pID=NA,gamma=NA,IDcovs=NA,ptype=NA,obstype="poisson"){
     #error checks
     if(length(gamma)!=n.cov)stop("gamma must be of length n.cov")
@@ -14,10 +17,8 @@ sim.genoSPIM <-
       if(length(gamma[[l]])!=length(IDcovs[[l]]))stop("gamma[[l]] must have one element per element of IDcovs[[l]]")
       if(sum(gamma[[l]])!=1)stop("gamma[[l]] must sum to 1")
     }
-    if(sum(p.geno.hom)!=1)stop("p.geno.hom must sum to 1")
-    if(sum(p.geno.het)!=1)stop("p.geno.het must sum to 1")
-    if(length(p.geno.hom)!=2)stop("p.geno.hom must be of length 2")
-    if(length(p.geno.het)!=3)warning("p.geno.het must be of length 3 unless simulating SNPs")
+    if(length(alpha0.het)!=2|length(alpha1.het)!=2)warning("alpha0.het and alpha1.het must both be of length 2 unless using SNPs")
+    if(length(alpha0.hom)!=1|length(alpha1.hom)!=1)stop("alpha0.hom and alpha1.hom must both be of length 1")
     
     # simulate a population of activity centers
     s<- cbind(runif(N, min(X[,1])-buff,max(X[,1])+buff), runif(N,min(X[,2])-buff,max(X[,2])+buff))
@@ -104,17 +105,63 @@ sim.genoSPIM <-
     if(!all(ycheck==y)){
       stop("Error in data simulator!")
     }
+
+    #build theta with sample covariates
+    samp.cov=rnorm(n.samples,0,1)
+    useSNPs=FALSE
+    if(length(alpha0.het)==2){ #microsats
+      logodds.het=matrix(NA,nrow=n.samples,ncol=2)
+      p.geno.het=matrix(NA,nrow=n.samples,ncol=3)
+      logodds.hom=rep(NA,n.samples)
+      p.geno.hom=matrix(NA,nrow=n.samples,ncol=2)
+      denom.het=denom.hom=rep(NA,n.samples)
+      for(l in 1:n.samples){
+        for(i in 1:2){
+          logodds.het[l,i] <- alpha0.het[i] + samp.cov[l]*alpha1.het[i]
+        }
+        denom.het[l] <- 1 + sum(exp(logodds.het[l,1:2]))
+        p.geno.het[l,2:3] <- exp(logodds.het[l,1:2])/denom.het[l]
+        p.geno.het[l,1] <- 1/denom.het[l]
+        logodds.hom[l] <- alpha0.hom + samp.cov[l]*alpha1.hom
+        #homozytote multinomial (logistic) regression (2 outcomes)
+        denom.hom[l] <- 1 + exp(logodds.hom[l])
+        p.geno.hom[l,2] <- exp(logodds.hom[l])/denom.hom[l]
+        p.geno.hom[l,1] <- 1/denom.hom[l]
+      }
+    }else if(length(alpha0.het)==1){#SNPs
+      useSNPs=TRUE
+      logodds.het=rep(NA,n.samples)
+      p.geno.het=matrix(NA,nrow=n.samples,ncol=2)
+      logodds.hom=rep(NA,n.samples)
+      p.geno.hom=matrix(NA,nrow=n.samples,ncol=2)
+      denom.het=denom.hom=rep(NA,n.samples)
+      for(l in 1:n.samples){
+        logodds.het[l] <- alpha0.het + samp.cov[l]*alpha1.het
+        denom.het[l] <- 1 + exp(logodds.het[l])
+        p.geno.het[l,2] <- exp(logodds.het[l])/denom.het[l]
+        p.geno.het[l,1] <- 1/denom.het[l]
+        logodds.hom[l] <- alpha0.hom + samp.cov[l]*alpha1.hom
+        denom.hom[l] <- 1 + exp(logodds.hom[l])
+        p.geno.hom[l,2] <- exp(logodds.hom[l])/denom.hom[l]
+        p.geno.hom[l,1] <- 1/denom.hom[l]
+      }
+    }
+
     theta=vector("list",n.cov)
     for(m in 1:n.cov){
-      theta[[m]]=matrix(0,nrow=n.levels[m],ncol=n.levels[m])
-      for(l in 1:n.levels[m]){
-        if(!any(ptype[[m]][l,]==2)){#homozygote
-          theta[[m]][l,which(ptype[[m]][l,]==1)]=(p.geno.hom[1])
-          theta[[m]][l,which(ptype[[m]][l,]==3)]=(p.geno.hom[2])*(1/sum(ptype[[m]][l,]==3))
-        }else{
-          theta[[m]][l,which(ptype[[m]][l,]==1)]=(p.geno.het[1])
-          theta[[m]][l,which(ptype[[m]][l,]==2)]=(p.geno.het[2])*(1/sum(ptype[[m]][l,]==2))
-          theta[[m]][l,which(ptype[[m]][l,]==3)]=(p.geno.het[3])*(1/sum(ptype[[m]][l,]==3))
+      theta[[m]]=array(0,dim=c(n.samples,n.levels[m],n.levels[m]))
+      for(l2 in 1:n.samples){
+        for(l in 1:n.levels[m]){
+          if(!any(ptype[[m]][l,]==2)){#homozygote
+            theta[[m]][l2,l,which(ptype[[m]][l,]==1)]=p.geno.hom[l2,1]
+            theta[[m]][l2,l,which(ptype[[m]][l,]==3)]=p.geno.hom[l2,2]*(1/sum(ptype[[m]][l,]==3))
+          }else{
+            theta[[m]][l2,l,which(ptype[[m]][l,]==1)]=p.geno.het[l2,1]
+            theta[[m]][l2,l,which(ptype[[m]][l,]==2)]=p.geno.het[l2,2]*(1/sum(ptype[[m]][l,]==2))
+            if(!useSNPs){
+              theta[[m]][l2,l,which(ptype[[m]][l,]==3)]=p.geno.het[l2,3]*(1/sum(ptype[[m]][l,]==3))
+            }
+          }
         }
       }
     }
@@ -128,7 +175,7 @@ sim.genoSPIM <-
           if(rbinom(1,1,pID[l])==1){
             for(j in 1:n.levels[l]){
               if(G.cap[i,l]==j){
-                G.error[i,l,k]=sample(IDcovs[[l]],1,prob=theta[[l]][j,])
+                G.error[i,l,k]=sample(IDcovs[[l]],1,prob=theta[[l]][i,j,])
               }
             }
           }else{
@@ -167,7 +214,8 @@ sim.genoSPIM <-
     
     out=list(y=y,this.j=this.j,this.k=this.k,G.true=G.true,G.obs=G.error,n.cov=n.cov,n.levels=n.levels,
              n.samples=length(this.j),IDlist=list(n.cov=n.cov,IDcovs=IDcovs,ptype=ptype),
-             ID=ID,X=X,K=K,buff=buff,s=s,n=nrow(y),corrupted=corrupted,G.Obstype=G.Obstype,obstype=obstype)
+             ID=ID,X=X,K=K,buff=buff,s=s,n=nrow(y),corrupted=corrupted,G.Obstype=G.Obstype,obstype=obstype,
+             p.geno.het=p.geno.het,p.geno.hom=p.geno.hom,samp.cov=samp.cov)
     
     return(out)
   }
