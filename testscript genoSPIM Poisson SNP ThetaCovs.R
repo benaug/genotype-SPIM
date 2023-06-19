@@ -57,11 +57,11 @@ pID <- rep(0.95,n.cov) #one for each covariate in this data simulator
 
 
 #heterozygotes
-alpha0.het <- 7 #intercept for logodds(allelic dropout/correct)
-alpha1.het <-  5 #coef for logodds(allelic dropout/correct)
+alpha0.het <- 4 #intercept for logodds(allelic dropout/correct)
+alpha1.het <-  3 #coef for logodds(allelic dropout/correct)
 #homozygotes
-alpha0.hom <- 10 #intercept for logodds(false allele/correct)
-alpha1.hom <- 5 #coef for logodds(false allele/correct)
+alpha0.hom <- 4 #intercept for logodds(false allele/correct)
+alpha1.hom <- 1.5 #coef for logodds(false allele/correct)
 
 data <- sim.genoSPIM.ThetaCovs(N=N,lam0=lam0,sigma=sigma,K=K,X=X,buff=buff,#cap-recap parms
                               obstype="poisson",
@@ -150,7 +150,10 @@ ptypeMatrix  <-  built.genos$ptypeArray[1,,]
 Niminits <- list(z=rep(1,M),s=nimbuild$s,G.true=nimbuild$G.true,ID=nimbuild$ID,capcounts=rowSums(nimbuild$y.true),
                  y.true=nimbuild$y.true,G.latent=nimbuild$G.latent, #theta=thetaMatrix,
                  lam0=inits$lam0,sigma=inits$sigma, #using lam0 and sigma truth for inits. dont do in practice.
-                 alpha0.het=alpha0.het,alpha1.het=alpha1.het,alpha0.hom=alpha0.hom,alpha1.hom=alpha1.hom)
+                 alpha0.het=alpha0.het,alpha1.het=alpha1.het,alpha0.hom=alpha0.hom,alpha1.hom=alpha1.hom) 
+#setting alpha inits to true values. Don't do in practice, but might need ballpark inits 
+#if very little replication or you could get label switching.
+
 
 #constants for Nimble
 J <- nrow(data$X)

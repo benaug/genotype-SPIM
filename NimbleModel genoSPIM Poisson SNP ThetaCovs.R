@@ -13,9 +13,9 @@ NimModel <- nimbleCode({
     gammaMat[m,1:3] ~ ddirch(alpha[m,1:3])
   }
   #genotyping error as function of covariates
-  alpha0.het ~ dnorm(0,sd=10) #heterozygote intercept
+  alpha0.het ~ dlogis(0,1) #heterozygote intercept
   alpha1.het ~ dnorm(0,sd=10) #heterozygote slope
-  alpha0.hom ~ dnorm(0,sd=10) #homozygote intercept
+  alpha0.hom ~ dlogis(0,1) #homozygote intercept
   alpha1.hom ~ dnorm(0,sd=10) #homozygote slope
   #--------------------------------------------------------------
   #likelihoods (except for s priors)
