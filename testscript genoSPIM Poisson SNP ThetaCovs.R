@@ -57,11 +57,11 @@ pID <- rep(0.95,n.cov) #one for each covariate in this data simulator
 
 
 #heterozygotes
-alpha0.het <- -4 #intercept for logodds(allelic dropout/correct)
-alpha1.het <-  -4 #coef for logodds(allelic dropout/correct)
+alpha0.het <- 7 #intercept for logodds(allelic dropout/correct)
+alpha1.het <-  5 #coef for logodds(allelic dropout/correct)
 #homozygotes
-alpha0.hom <- -7 #intercept for logodds(false allele/correct)
-alpha1.hom <- -4 #coef for logodds(false allele/correct)
+alpha0.hom <- 10 #intercept for logodds(false allele/correct)
+alpha1.hom <- 5 #coef for logodds(false allele/correct)
 
 data <- sim.genoSPIM.ThetaCovs(N=N,lam0=lam0,sigma=sigma,K=K,X=X,buff=buff,#cap-recap parms
                               obstype="poisson",

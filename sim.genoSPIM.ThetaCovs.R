@@ -138,12 +138,12 @@ sim.genoSPIM.ThetaCovs <-
       for(l in 1:n.samples){
         logodds.het[l] <- alpha0.het + samp.cov[l]*alpha1.het
         denom.het[l] <- 1 + exp(logodds.het[l])
-        p.geno.het[l,2] <- exp(logodds.het[l])/denom.het[l]
-        p.geno.het[l,1] <- 1/denom.het[l]
+        p.geno.het[l,1] <- exp(logodds.het[l])/denom.het[l]
+        p.geno.het[l,2] <- 1/denom.het[l]
         logodds.hom[l] <- alpha0.hom + samp.cov[l]*alpha1.hom
         denom.hom[l] <- 1 + exp(logodds.hom[l])
-        p.geno.hom[l,2] <- exp(logodds.hom[l])/denom.hom[l]
-        p.geno.hom[l,1] <- 1/denom.hom[l]
+        p.geno.hom[l,1] <- exp(logodds.hom[l])/denom.hom[l]
+        p.geno.hom[l,2] <- 1/denom.hom[l]
       }
     }
 

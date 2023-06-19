@@ -10,13 +10,13 @@ NimModel <- nimbleCode({
     for(k in 1:3){
       alpha[m,k] <- 1 #dirichlet prior parameters
     }
-    gammaMat[m,1:3]~ddirch(alpha[m,1:3])
+    gammaMat[m,1:3] ~ ddirch(alpha[m,1:3])
   }
   #genotyping error as function of covariates
-  alpha0.het~dunif(-10,10) #heterozygote intercept
-  alpha1.het~dunif(-10,10) #heterozygote slope
-  alpha0.hom~dunif(-10,10) #homozygote intercept
-  alpha1.hom~dunif(-10,10) #homozygote slope
+  alpha0.het ~ dnorm(0,sd=10) #heterozygote intercept
+  alpha1.het ~ dnorm(0,sd=10) #heterozygote slope
+  alpha0.hom ~ dnorm(0,sd=10) #homozygote intercept
+  alpha1.hom ~ dnorm(0,sd=10) #homozygote slope
   #--------------------------------------------------------------
   #likelihoods (except for s priors)
   #--------------------------------------------------------------
@@ -36,13 +36,13 @@ NimModel <- nimbleCode({
     #heterozygote multinomial link (2 outcomes)
     logodds.het[l] <- alpha0.het + samp.cov[l]*alpha1.het
     denom.het[l] <- 1 + exp(logodds.het[l])
-    p.geno.het[l,2] <- exp(logodds.het[l])/denom.het[l]
-    p.geno.het[l,1] <- 1/denom.het[l]
+    p.geno.het[l,1] <- exp(logodds.het[l])/denom.het[l]
+    p.geno.het[l,2] <- 1/denom.het[l]
     logodds.hom[l] <- alpha0.hom + samp.cov[l]*alpha1.hom
     #homozygote multinomial (logistic) link (2 outcomes)
     denom.hom[l] <- 1 + exp(logodds.hom[l])
-    p.geno.hom[l,2] <- exp(logodds.hom[l])/denom.hom[l]
-    p.geno.hom[l,1] <- 1/denom.hom[l]
+    p.geno.hom[l,1] <- exp(logodds.hom[l])/denom.hom[l]
+    p.geno.hom[l,2] <- 1/denom.hom[l]
     
     #sample-level genotype classification array
     theta[l,1:3,1:3] <- getTheta(ptype = ptype[1:3,1:3],p.geno.het = p.geno.het[l,1:2],p.geno.hom = p.geno.hom[l,1:2])
