@@ -100,7 +100,7 @@ sigma <- 0.50
 buff <- 3 #state space buffer. Should be at least 3 sigma.
 X <- expand.grid(3:11,3:11) #trapping array
 J <- nrow(X)
-beta0.lam0 <- -2 #lam0 intercept on log scale
+beta0.lam0 <- -1 #lam0 intercept on log scale
 beta1.lam0 <- 0.5 #effort effect on lam0 on log scale
 
 #simulate some effort. using lognormal so I can log effort below (can't log a 0)
