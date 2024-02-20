@@ -100,8 +100,8 @@ sigma <- 0.50
 buff <- 3 #state space buffer. Should be at least 3 sigma.
 X <- expand.grid(3:11,3:11) #trapping array
 J <- nrow(X)
-beta0.lam0 <- -3 #lam0 intercept on log scale
-beta1.lam0 <- 2 #effort effect on lam0 on log scale
+beta0.lam0 <- -2 #lam0 intercept on log scale
+beta1.lam0 <- 0.5 #effort effect on lam0 on log scale
 
 #simulate some effort. using lognormal so I can log effort below (can't log a 0)
 effort <- matrix(rlnorm(J*K,0,1),J,K) #J x K matrix
@@ -153,7 +153,8 @@ data <- sim.genoSPIM.sampType.effort(N=N,beta0.lam0=beta0.lam0,
 #number of simulated detections per detected individual (is this realistic?)
 hist(rowSums(data$y),breaks=25)
 data$n
-
+#plot j x k detections by effort
+plot(apply(data$y,c(2,3),sum)~effort)
 
 #The observed data are 
 #1) the trap and occasion of every "count member". E.g., a count of 3 
