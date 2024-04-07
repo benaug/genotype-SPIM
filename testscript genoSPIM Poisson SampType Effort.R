@@ -298,7 +298,7 @@ conf$addSampler(target = paste0("y.true[1:",M,",1:",J,",1:",K,"]"),
 #identify G.true nodes here. Must be in matrix with individuals down rows and loci across columns.
 #This update only works with "reps" vectorized in bugs code. Must modify this sampler if you unvectorize those.
 G.true.nodes <- Rmodel$expandNodeNames(paste0("G.true[1:",M,",1:",n.cov.use,"]"))
-G.obs.nodes <- Rmodel$expandNodeNames(paste0("G.obs[1:",M,",1:",n.cov.use,",1:",n.rep.use,"]"))
+G.obs.nodes <- Rmodel$expandNodeNames(paste0("G.obs[1:",n.samples,",1:",n.cov.use,",1:",n.rep.use,"]"))
 calcNodes <- c(G.true.nodes,G.obs.nodes)
 conf$addSampler(target = paste0("G.true[1:",M,",1:",n.cov,"]"),
                 type = 'GSampler2',

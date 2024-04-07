@@ -324,7 +324,7 @@ conf$removeSampler("G.true")
 #This update only works with "reps" vectorized in bugs code. Must modify this sampler if you unvectorize those.
 for(g in 1:N.session){
   G.true.nodes <- Rmodel$expandNodeNames(paste0("G.true[",g,",1:",M[g],",1:",n.cov.use,"]"))
-  G.obs.nodes <- Rmodel$expandNodeNames(paste0("G.obs[",g,",1:",M[g],",1:",n.cov.use,",1:",n.rep.use[g],"]"))
+  G.obs.nodes <- Rmodel$expandNodeNames(paste0("G.obs[",g,",1:",n.samples[g],",1:",n.cov.use,",1:",n.rep.use[g],"]"))
   calcNodes <- c(G.true.nodes,G.obs.nodes)
   conf$addSampler(target = paste0("G.true[",g,",1:",M[g],",1:",n.cov.use,"]"),
                   type = 'GSampler2',
