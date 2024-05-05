@@ -218,7 +218,7 @@ parameters <- c('psi','lam0','sigma','N','n','p.geno.het','p.geno.hom','gammaMat
 #can also monitor a different set of parameters with a different thinning rate
 parameters2 <- c('ID',"G.true")
 nt <- 1 #thinning rate
-nt2 <- 50#thin more
+nt2 <- 50 #thin more
 
 # Build the model, configure the mcmc, and compile
 # can ignore warnings about 1) ID in constants 2) possible size mismatch for G.obs.
