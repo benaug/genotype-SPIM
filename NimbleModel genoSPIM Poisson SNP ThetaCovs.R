@@ -23,7 +23,7 @@ NimModel <- nimbleCode({
   for(i in 1:M){
     z[i] ~ dbern(psi)
     for(m in 1:n.cov){
-      G.true[i,m]~dcat(gammaMat[m,1:3])
+      G.true[i,m] ~ dcat(gammaMat[m,1:3])
     }
     s[i,1] ~ dunif(xlim[1],xlim[2])
     s[i,2] ~ dunif(ylim[1],ylim[2])

@@ -114,7 +114,7 @@ effort <- log(effort) #log transform effort
 effort[K2D==0] <- 0 ###Set effort[j,k]=0 for trap-occasions with no sampling effort
 #plot p vs effort to make sure it is realistic
 lam0 <- exp(beta0.lam0 + beta1.lam0*effort)*K2D
-plot(lam0~effort)
+plot(lam0 ~ effort)
 
 n.rep <- 2 #number of PCR reps per sample.
 
@@ -252,17 +252,17 @@ parameters <- c('psi','beta0.lam0','beta1.lam0',
 #can also monitor a different set of parameters with a different thinning rate
 parameters2 <- c('ID',"G.true")
 nt <- 1 #thinning rate
-nt2 <- 50#thin more
+nt2 <- 50 #thin more
 
 # Build the model, configure the mcmc, and compile
 # can ignore warnings about 1) ID in constants 2) possible size mismatch for G.obs.
 start.time <- Sys.time()
 Rmodel <- nimbleModel(code=NimModel, constants=constants, data=Nimdata,check=FALSE,inits=Niminits)
 #only configuring nodes here that we dont' supply samplers to below. ignore comments about removing nimble-assigned samplers
-config.nodes <- c("p.geno.het","p.geno.hom[1:2,1:2]","psi","sigma","beta0.lam0","beta1.lam0",
+config.nodes <- c("p.geno.het","p.geno.hom","psi","sigma","beta0.lam0","beta1.lam0",
                   "gammaMat","z")
 conf <- configureMCMC(Rmodel,monitors=parameters, thin=nt, monitors2=parameters2,thin2=nt2,
-                      useConjugacy = FALSE,nodes=config.nodes)
+                      useConjugacy = TRUE,nodes=config.nodes)
 
 #conf$printSamplers() #shows the samplers used for each parameter and latent variable
 
@@ -308,27 +308,18 @@ conf$addSampler(target = paste0("G.true[1:",M,",1:",n.cov,"]"),
                                G.true.nodes=G.true.nodes,G.obs.nodes=G.obs.nodes,
                                calcNodes=calcNodes), silent = TRUE)
 
-#*optional* sampler replacements:
-#replace default activity center sampler that updates x and y locations separately with a joint update
-#should be a little more efficient. Could use AFslice or block random walk.
-#BUT! I suggest using "sSampler", which is a RW block update for the x and y locs with no covariance,
-#AND only tuned for when z=1. When z=0, it draws from the prior, assumed to be uniform.
+#RW block update for s[i,1:2]
+#only tuned for when z=1. When z=0, it draws from the prior, assumed to be uniform. 
 # conf$removeSampler(paste("s[1:",M,", 1:2]", sep=""))
 for(i in 1:M){
-  # conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
-  #                 type = 'AF_slice',control=list(adaptive=TRUE),silent = TRUE)
-  # block RW option
-  # do not adapt covariance bc samples not deterministically linked to individuals
-  # conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
-  #                 type = 'RW_block',control=list(adaptive=TRUE,adaptScaleOnly=TRUE,adaptInterval=250),silent = TRUE)
   conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
                   type = 'sSampler',control=list(i=i,xlim=nimbuild$xlim,ylim=nimbuild$ylim,scale=1),silent = TRUE)
   #scale parameter here is just the starting scale. It will be tuned.
 }
 
 #replace with block sampler?
-conf$removeSampler(c("beta0.lam0","beta1.lam0"))
-conf$addSampler(target = c("beta0.lam0","beta1.lam0"),
+# conf$removeSampler(c("beta0.lam0","beta1.lam0")) #often better to keep independent samplers
+conf$addSampler(target = c("beta0.lam0","sigma"), #might add beta1.lam0 if posterior correlation with beta0.lam0 is high
                 type = 'RW_block',control=list(),silent = TRUE)
 
 # Build and compile

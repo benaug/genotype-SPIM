@@ -1,8 +1,8 @@
 NimModel <- nimbleCode({
   D ~ dunif(0,10) #Expected density
   #detection function parameters, shared across sessions
-  lam0.fixed~dunif(0,10)
-  sigma.fixed~dunif(0,100)
+  lam0.fixed ~ dunif(0,10)
+  sigma.fixed ~ dunif(0,100)
   
   #sharing genotyping error parameters across sessions
   #genotyping error priors for heterozygote and homozygote loci-level genotypes
@@ -32,7 +32,7 @@ NimModel <- nimbleCode({
       for(k in 1:n.levels[m]){
         alpha[g,m,k] <- 1 #dirichlet prior parameters
       }
-      gammaMat[g,m,1:n.levels[m]]~ddirch(alpha[g,m,1:n.levels[m]])
+      gammaMat[g,m,1:n.levels[m]] ~ ddirch(alpha[g,m,1:n.levels[m]])
     }
     
     for(i in 1:M[g]){

@@ -89,18 +89,18 @@ n.levels
 #Normal SCR stuff
 N <- 78
 lam0 <- 0.25
-theta.d <- 0.01 # negative binomial dispersion parameter. Lower is more dispersion
+theta.d <- 0.1 # negative binomial dispersion parameter. Lower is more dispersion
 sigma <- 0.50
-K <- 10 #number of capture occasoins
+K <- 10 #number of capture occasions
 buff <- 3 #state space buffer. Should be at least 3 sigma.
 X <- expand.grid(3:11,3:11) #trapping array
-n.rep <- 2 #number of PCR reps per sample.
+n.rep <- 3 #number of PCR reps per sample.
 
 IDcovs <- vector("list",n.cov)
 for(i in 1:n.cov){
   IDcovs[[i]] <- 1:nrow(unique.genos[[i]])
 }
-gamma=vector("list",n.cov)
+gamma <- vector("list",n.cov)
 for(i in 1:n.cov){
   # gamma[[i]] <- rep(1/n.levels[i],n.levels[i]) #This simulates equal genotype frequencies
   gamma[[i]] <- gammameans[[i]] #This uses the frequencies estimated from fisher data set
@@ -201,24 +201,25 @@ parameters <- c('psi','lam0','theta.d','sigma','N','n','p.geno.het','p.geno.hom'
 #can also monitor a different set of parameters with a different thinning rate
 parameters2 <- c('ID',"G.true")
 nt <- 1 #thinning rate
-nt2 <- 50#thin more
+nt2 <- 50 #thin more
 
 # Build the model, configure the mcmc, and compile
 # can ignore warnings about 1) ID in constants 2) possible size mismatch for G.obs.
 start.time <- Sys.time()
 Rmodel <- nimbleModel(code=NimModel, constants=constants, data=Nimdata,check=FALSE,inits=Niminits)
-#can use "nodes" argument in configureMCMC below to omit y.true and G.true that are replaced below for faster
-#configuration
-conf <- configureMCMC(Rmodel,monitors=parameters, thin=nt, monitors2=parameters2,thin2=nt2,useConjugacy = TRUE) 
+#using config.nodes for faster compilation-skip nimble assigning samplers that need to be removed and replaced
+#if you add parameters to the model, add to config.nodes to assign them samplers
+config.nodes <- c("p.geno.het","p.geno.hom","psi","sigma","lam0","theta.d","gammaMat","z")
+conf <- configureMCMC(Rmodel,monitors=parameters, thin=nt,
+                      monitors2=parameters2,thin2=nt2,
+                      nodes=config.nodes,useConjugacy = TRUE) 
 
 #conf$printSamplers() #shows the samplers used for each parameter and latent variable
 
-###Two *required* sampler replacements
-
 ##Here, we remove the default sampler for y.true
 #and replace it with the custom "IDSampler".
-conf$removeSampler("G.obs") #nimble will assign sampler here if any missing data. Remove it.
-conf$removeSampler("y.true")
+# conf$removeSampler("G.obs") #nimble will assign sampler here if any missing data. Remove it.
+# conf$removeSampler("y.true")
 conf$addSampler(target = paste0("y.true[1:",M,",1:",J,"]"),
                 type = 'IDSampler',control = list(M=M,J=J,K1D=K1D,n.cov=n.cov.use,n.samples=n.samples,
                                                   n.rep=n.rep.use,this.j=nimbuild$this.j,G.obs=data$G.obs,
@@ -226,7 +227,7 @@ conf$addSampler(target = paste0("y.true[1:",M,",1:",J,"]"),
                 silent = TRUE)
 
 #replace default G.true sampler, which is not correct, with custom sampler for G.true, "GSampler"
-conf$removeSampler("G.true")
+# conf$removeSampler("G.true")
 # # this is the "safe" version. It will use a lot of RAM, but will be correct if any parameters
 # # depend on G.true besides G.obs, which seems unlikely for genotypes. But if, say, G.true[,1] is "sex", and
 # # you specify that sigma varies by sex, this update is correct and the more efficient one below will not be.
@@ -246,29 +247,24 @@ G.obs.nodes <- Rmodel$expandNodeNames(paste0("G.obs[1:",n.samples,",1:",n.cov.us
 calcNodes <- c(G.true.nodes,G.obs.nodes)
 conf$addSampler(target = paste0("G.true[1:",M,",1:",n.cov.use,"]"),
                 type = 'GSampler2',
-                control = list(M =M, n.cov=n.cov.use,n.levels=n.levels,n.rep=n.rep.use,
+                control = list(M=M,n.cov=n.cov.use,n.levels=n.levels,n.rep=n.rep.use,
                                na.ind=nimbuild$G.obs.NA.indicator,n.samples=nimbuild$n.samples,
                                G.true.nodes=G.true.nodes,G.obs.nodes=G.obs.nodes,
                                calcNodes=calcNodes), silent = TRUE)
 
-#*optional* sampler replacements:
-#replace default activity center sampler that updates x and y locations separately with a joint update
-#should be a little more efficient. Could use AFslice or block random walk.
-#BUT! I suggest using "sSampler", which is a RW block update for the x and y locs with no covariance,
-#AND only tuned for when z=1. When z=0, it draws from the prior, assumed to be uniform. 
-conf$removeSampler(paste("s[1:",M,", 1:2]", sep=""))
+#RW block update for s[i,1:2]
+#only tuned for when z=1. When z=0, it draws from the prior, assumed to be uniform. 
+# conf$removeSampler(paste("s[1:",M,", 1:2]", sep=""))
 for(i in 1:M){
-  # conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
-  #                 type = 'AF_slice',control=list(adaptive=TRUE),silent = TRUE)
-  # block RW option
-  # do not adapt covariance bc samples not deterministically linked to individuals
-  # longer adapt interval to average over more data configurations for each s_i
-  # conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
-  #                 type = 'RW_block',control=list(adaptive=TRUE,adaptScaleOnly=TRUE,adaptInterval=250),silent = TRUE)
   conf$addSampler(target = paste("s[",i,", 1:2]", sep=""),
                   type = 'sSampler',control=list(i=i,xlim=nimbuild$xlim,ylim=nimbuild$ylim,scale=1),silent = TRUE)
   #scale parameter here is just the starting scale. It will be tuned.
 }
+
+#block update for lam0 and sigma helps when data sparse enough to cause correlated posteriors. 
+# conf$removeSampler(c("lam0","sigma")) #often better to keep independent samplers
+conf$addSampler(target = c("lam0","sigma"),
+                type = 'RW_block',control = list(adaptive=TRUE),silent = TRUE)
 
 # Build and compile
 Rmcmc <- buildMCMC(conf)
@@ -282,15 +278,15 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 start.time2 <- Sys.time()
 Cmcmc$run(5000,reset=FALSE) #can extend run by rerunning this line
 end.time <- Sys.time()
-end.time-start.time  # total time for compilation, replacing samplers, and fitting
-end.time-start.time2 # post-compilation run time
+end.time - start.time  # total time for compilation, replacing samplers, and fitting
+end.time - start.time2 # post-compilation run time
 
 library(coda)
 mvSamples <- as.matrix(Cmcmc$mvSamples)
 
 #remove gammaMat posteriors (not that interesting and tons of them) and plot
 idx <- grep("gammaMat",colnames(mvSamples))
-plot(mcmc(mvSamples[200:nrow(mvSamples),-idx]))
+plot(mcmc(mvSamples[500:nrow(mvSamples),-idx]))
 
 data$n #number of individuals captured to compare to posterior for n. No uncertainty with enough genotype info.
 
@@ -366,6 +362,6 @@ if(length(these.samps>0)){
 out <- t(apply(G.samps[ind,,],2,FUN=map.genos,unique.genos))
 head(out,10)
 
-loci=1
-loci=loci+1
+loci <- 1
+loci <- loci+1
 table(out[,loci])

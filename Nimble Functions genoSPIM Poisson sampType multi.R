@@ -1,13 +1,10 @@
-#------------------------------------------------------------------
-# Function for calculation detection rate
-#------------------------------------------------------------------
 GetDetectionRate <- nimbleFunction(
   run = function(s = double(1), lam0=double(0), sigma=double(0), 
                  X=double(2), J=double(0), z=double(0)){ 
     returnType(double(1))
     if(z==0) return(rep(0,J))
     if(z==1){
-      d2 <- ((s[1]-X[1:J,1])^2 + (s[2]-X[1:J,2])^2)
+      d2 <- (s[1]-X[1:J,1])^2 + (s[2]-X[1:J,2])^2
       ans <- lam0*exp(-d2/(2*sigma^2))
       return(ans)
     }
@@ -35,8 +32,8 @@ dPoissonVector <- nimbleFunction(
 rPoissonVector <- nimbleFunction(
   run = function(n = integer(0),lam = double(1),z = double(0)) {
     returnType(double(1))
-    J=nimDim(lam)[1]
-    out=numeric(J,value=0)
+    J <- nimDim(lam)[1]
+    out <- numeric(J,value=0)
     return(out)
   }
 )
@@ -48,7 +45,7 @@ Getcapcounts <- nimbleFunction(
     J <- nimDim(y.true)[2]
     capcounts=numeric(M, value = 0)
     for(i in 1:M){
-      capcounts[i]=sum(y.true[i,1:J])
+      capcounts[i] <- sum(y.true[i,1:J])
     }
     return(capcounts)
   }
@@ -73,30 +70,30 @@ Getncap <- nimbleFunction(
 getTheta <- nimbleFunction(
   run = function(ptype = double(3), p.geno.het = double(1), p.geno.hom = double(1), n.levels = double(1)) {
     returnType(double(3))
-    n.cov=nimDim(ptype)[1]
-    max.levels=nimDim(ptype)[2]
-    thetaArray=array(NA,dim=c(n.cov,max.levels,max.levels))
+    n.cov <- nimDim(ptype)[1]
+    max.levels <- nimDim(ptype)[2]
+    thetaArray <- array(NA,dim=c(n.cov,max.levels,max.levels))
     for(m in 1:n.cov){
       for(l in 1:n.levels[m]){
         if(!any(ptype[m,l,1:n.levels[m]]==2)){#homozygote bc no possible allelic dropout
-          tmp3=(1/sum(ptype[m,l,1:n.levels[m]]==3))
+          tmp3 <- (1/sum(ptype[m,l,1:n.levels[m]]==3))
           for(l2 in 1:n.levels[m]){
             if(ptype[m,l,l2]==3){#false allele
-              thetaArray[m,l,l2]=p.geno.hom[2]*tmp3
+              thetaArray[m,l,l2] <- p.geno.hom[2]*tmp3
             }else{#correct
-              thetaArray[m,l,l2]=p.geno.hom[1]
+              thetaArray[m,l,l2] <- p.geno.hom[1]
             }
           }
         }else{ #heterozygote
-          tmp2=(1/sum(ptype[m,l,1:n.levels[m]]==2))
-          tmp3=(1/sum(ptype[m,l,1:n.levels[m]]==3))
+          tmp2 <- (1/sum(ptype[m,l,1:n.levels[m]]==2))
+          tmp3 <- (1/sum(ptype[m,l,1:n.levels[m]]==3))
           for(l2 in 1:n.levels[m]){
             if(ptype[m,l,l2]==3){#false allele
-              thetaArray[m,l,l2]=p.geno.het[3]*tmp3
+              thetaArray[m,l,l2] <- p.geno.het[3]*tmp3
             }else if(ptype[m,l,l2]==2){#allelic dropout
-              thetaArray[m,l,l2]=p.geno.het[2]*tmp2
+              thetaArray[m,l,l2] <- p.geno.het[2]*tmp2
             }else{#correct
-              thetaArray[m,l,l2]=p.geno.het[1]
+              thetaArray[m,l,l2] <- p.geno.het[1]
             }
           }
         }
@@ -113,7 +110,7 @@ dcat2 <- nimbleFunction(
     logProb <- 0
     for(rep in 1:n.rep){
       if(na.ind[rep]==FALSE){
-        logProb = logProb + log(theta[x[rep]])
+        logProb <- logProb + log(theta[x[rep]])
       }
     }
     return(logProb)
@@ -124,7 +121,7 @@ rcat2 <- nimbleFunction(
   run = function(n = integer(0), theta = double(1), n.rep = integer(0),
                  na.ind=double(1)) {
     returnType(double(1))
-    out=numeric(n.rep,value=999)
+    out <- numeric(n.rep,value=999)
     return(out)
   }
 )
@@ -154,25 +151,24 @@ GSampler <- nimbleFunction(
     samp.type <- control$samp.type
   },
   run = function() {
-    G.probs=model$gammaMat[g,m,1:n.levels[m]] #pull out genotype frequencies
+    G.probs <- model$gammaMat[g,m,1:n.levels[m]] #pull out genotype frequencies
     if(model$G.latent[g,i,m]==FALSE){ #these individual-loci have samples allocated to them currently
       #build proposal distribution using genotype frequency likelihood and classification likelihood.
-      these.samps=which(model$ID[g,1:n.samples]==i)
-      # G.obs <- model$G.obs[g,1:n.samples,,]
-      error.probs=rep(1,n.levels[m]) #error probs|category level
+      these.samps <- which(model$ID[g,1:n.samples]==i)
+      error.probs <- rep(1,n.levels[m]) #error probs|category level
       for(i2 in 1:length(these.samps)){
         for(obs in 1:n.rep){
           if(na.ind[these.samps[i2],obs]==FALSE){ #if observed
-            error.probs=error.probs*model$theta[m,samp.type[these.samps[i2]],1:n.levels[m],G.obs[these.samps[i2],m,obs]]
+            error.probs <- error.probs*model$theta[m,samp.type[these.samps[i2]],1:n.levels[m],G.obs[these.samps[i2],m,obs]]
           }
         }
       }
-      G.probs=G.probs*error.probs
-      G.probs=G.probs/sum(G.probs)
+      G.probs <- G.probs*error.probs
+      G.probs <- G.probs/sum(G.probs)
     }else{ #these individual-loci do not have samples allocated to them currently
       #build proposal distribution using only genotype frequency likelihood. This is the
       #full conditional if no other parameters depend on G.true
-      G.probs=G.probs/sum(G.probs)
+      G.probs <- G.probs/sum(G.probs)
     }
     #MH step
     model.lp.initial <- model$getLogProb(calcNodes) #initial logProb
@@ -213,34 +209,34 @@ GSampler2 <- nimbleFunction(
     calcNodes <- control$calcNodes
   },
   run = function() {
-    node.idx=1 #this is used to keep up with the correct nodes in G.true.nodes which MUST BE 1D, for each i and m
+    node.idx <- 1 #this is used to keep up with the correct nodes in G.true.nodes which MUST BE 1D, for each i and m
     #must loop over loci first, then individuals for this to work correctly.
     for(m in 1:n.cov){
-      G.obs.m.idx=seq((m-1)*n.samples+1,(m-1)*n.samples+n.samples,1) #get index for cov m for all samples
+      G.obs.m.idx <- seq((m-1)*n.samples+1,(m-1)*n.samples+n.samples,1) #get index for cov m for all samples
       for(i in 1:M){
         G.probs=model$gammaMat[g,m,1:n.levels[m]] #pull out genotype frequencies
         if(model$G.latent[g,i,m]==FALSE){ #these individual-loci have samples allocated to them currently
           #must use MH
           #build proposal distribution using genotype frequency likelihood and classification likelihood.
-          these.samps=which(model$ID[g,]==i)
-          G.obs.idx=G.obs.m.idx[these.samps] #pull out nodes for these samples at cov m
-          n.these.samps=length(these.samps)
-          G.obs=array(NA,dim=c(n.samples,n.cov,n.rep))
+          these.samps <- which(model$ID[g,]==i)
+          G.obs.idx <- G.obs.m.idx[these.samps] #pull out nodes for these samples at cov m
+          n.these.samps <- length(these.samps)
+          G.obs <- array(NA,dim=c(n.samples,n.cov,n.rep))
           #pulling G.obs out in loop bc "can't do math in more than 2 dimensions"
           # G.obs <- model$G.obs[g,1:n.samples,,1:n.rep]
           for(r in 1:n.rep){
             G.obs[,,r] <- model$G.obs[g,1:n.samples,1:n.cov,r]
           }
-          error.probs=rep(1,n.levels[m]) #error probs|category level
+          error.probs <- rep(1,n.levels[m]) #error probs|category level
           for(i2 in 1:length(these.samps)){
             for(obs in 1:n.rep){
               if(na.ind[these.samps[i2],m,obs]==FALSE){ #if observed
-                error.probs=error.probs*model$theta[m,samp.type[these.samps[i2]],1:n.levels[m],G.obs[these.samps[i2],m,obs]]
+                error.probs <- error.probs*model$theta[m,samp.type[these.samps[i2]],1:n.levels[m],G.obs[these.samps[i2],m,obs]]
               }
             }
           }
-          G.probs=G.probs*error.probs
-          G.probs=G.probs/sum(G.probs)
+          G.probs <- G.probs*error.probs
+          G.probs <- G.probs/sum(G.probs)
           #MH step
           G.true.lp.initial <- model$getLogProb(G.true.nodes[node.idx]) #initial logProb for G.true
           G.obs.lp.initial <- model$getLogProb(G.obs.nodes[G.obs.idx]) #initial logProb for G.obs
@@ -266,13 +262,13 @@ GSampler2 <- nimbleFunction(
         }else{ #these individual-loci do not have samples allocated to them currently
           #build proposal distribution using only genotype frequency likelihood. This is the
           #full conditional if no other parameters depend on G.true. So always accept
-          G.probs=G.probs/sum(G.probs)
+          G.probs <- G.probs/sum(G.probs)
           G.prop <- rcat(1,G.probs[1:n.levels[m]])
           model$G.true[g,i,m] <<- G.prop #store in model
           model$calculate(G.true.nodes[node.idx]) #update G.true logprob. No G.obs logprob.
           mvSaved["G.true",1][g,i,m] <<- model[["G.true"]][g,i,m]
         }
-        node.idx=node.idx+1 #increment
+        node.idx <- node.idx+1 #increment
       }
     }
     #copy back to mySaved to update logProbs. should be done above, already though.
@@ -288,7 +284,7 @@ IDSampler <- nimbleFunction(
   contains = sampler_BASE,
   setup = function(model, mvSaved, target, control) {
     g <- control$g
-    M<-control$M
+    M <- control$M
     J <- control$J
     K1D <- control$K1D
     G.obs <- control$G.obs
@@ -310,91 +306,91 @@ IDSampler <- nimbleFunction(
     lam <- model$lam[g,1:M,1:J]
     
     #Precalculate likelihoods
-    ll.y=matrix(0,nrow=M,ncol=J) #M x J most efficient here
+    ll.y <- matrix(0,nrow=M,ncol=J) #M x J most efficient here
     for(i in 1:M){
       if(z[i]==1){
-        ll.y[i,1:J]=dpois(y.true[i,1:J],K1D[1:J]*lam[i,1:J],log=TRUE)
+        ll.y[i,1:J] <- dpois(y.true[i,1:J],K1D[1:J]*lam[i,1:J],log=TRUE)
       }
     }
-    ll.y.cand=ll.y
-    ll.theta=array(0,dim=c(n.samples,n.cov,n.rep))
+    ll.y.cand <- ll.y
+    ll.theta <- array(0,dim=c(n.samples,n.cov,n.rep))
     for(l in 1:n.samples){
       for(m in 1:n.cov){
         for(rep in 1:n.rep){
           if(na.ind[l,m,rep]==FALSE){
-            ll.theta[l,m,rep]=dcat(G.obs[l,m,rep],theta[m,samp.type[l],G.true[ID.curr[l],m],1:n.levels[m]],log=TRUE)
+            ll.theta[l,m,rep] <- dcat(G.obs[l,m,rep],theta[m,samp.type[l],G.true[ID.curr[l],m],1:n.levels[m]],log=TRUE)
           }
         }
       }
     }
-    ll.theta.cand=ll.theta
+    ll.theta.cand <- ll.theta
 
     for(l in 1:n.samples){
-      y.cand=y.true #necessary for every sample for correct proposal probs
+      y.cand <- y.true #necessary for every sample for correct proposal probs
       #proposal distribution is combination of distance-based and genotype-based distributions
-      dist.probs=lam[,this.j[l]]*z
+      dist.probs <- lam[,this.j[l]]*z
       #G.probs proportional to genotyping error likelihood over all loci and reps
-      G.probs=z #setting to z initializes to 1 if z=1, 0 otherwise
+      G.probs <- z #setting to z initializes to 1 if z=1, 0 otherwise
       for(i in 1:M){
         if(z[i]==1){
           for(m in 1:n.cov){
             for(rep in 1:n.rep){
               if(na.ind[l,m,rep]==FALSE){ #if observed
-                G.probs[i]=G.probs[i]*theta[m,samp.type[l],G.true[i,m],G.obs[l,m,rep]]
+                G.probs[i] <- G.probs[i]*theta[m,samp.type[l],G.true[i,m],G.obs[l,m,rep]]
               }
             }
           }
         }
       }
-      total.probs=dist.probs*G.probs
-      total.probs=total.probs/sum(total.probs) 
+      total.probs <- dist.probs*G.probs
+      total.probs <- total.probs/sum(total.probs) 
       #could consider classification error likelihood in proposal
       #I did this for R sampler in PNAS paper. Better proposals, but takes longer to compute.
       #not sure if worth it
-      ID.cand=ID.curr
-      ID.cand[l]=rcat(1,prob=total.probs)
+      ID.cand <- ID.curr
+      ID.cand[l] <- rcat(1,prob=total.probs)
       if(ID.curr[l]!=ID.cand[l]){ #skip if propose same ID
-        swapped=c(ID.curr[l],ID.cand[l])#order swap.out then swap.in
-        propprob=total.probs[swapped[2]]
-        backprob=total.probs[swapped[1]]
+        swapped <- c(ID.curr[l],ID.cand[l])#order swap.out then swap.in
+        propprob <- total.probs[swapped[2]]
+        backprob <- total.probs[swapped[1]]
 
         #update y.true
-        y.cand[ID.curr[l],this.j[l]]=y.true[ID.curr[l],this.j[l]]-1
-        y.cand[ID.cand[l],this.j[l]]=y.true[ID.cand[l],this.j[l]]+1
-        focalprob=(sum(ID.curr==ID.curr[l])/n.samples)*(y.true[ID.curr[l],this.j[l]]/sum(y.true[ID.curr[l],]))
-        focalbackprob=(sum(ID.cand==ID.cand[l])/n.samples)*(y.cand[ID.cand[l],this.j[l]]/sum(y.cand[ID.cand[l],]))
+        y.cand[ID.curr[l],this.j[l]] <- y.true[ID.curr[l],this.j[l]]-1
+        y.cand[ID.cand[l],this.j[l]] <- y.true[ID.cand[l],this.j[l]]+1
+        focalprob <- (sum(ID.curr==ID.curr[l])/n.samples)*(y.true[ID.curr[l],this.j[l]]/sum(y.true[ID.curr[l],]))
+        focalbackprob <- (sum(ID.cand==ID.cand[l])/n.samples)*(y.cand[ID.cand[l],this.j[l]]/sum(y.cand[ID.cand[l],]))
 
         ##update ll.y
-        ll.y.cand[swapped,this.j[l]]=dpois(y.cand[swapped,this.j[l]],K1D[this.j[l]]*lam[swapped,this.j[l]],log=TRUE)
+        ll.y.cand[swapped,this.j[l]] <- dpois(y.cand[swapped,this.j[l]],K1D[this.j[l]]*lam[swapped,this.j[l]],log=TRUE)
 
         #update ll.theta
         for(m in 1:n.cov){
           for(rep in 1:n.rep){
             if(na.ind[l,m,rep]==FALSE){
-              ll.theta.cand[l,m,rep]=dcat(G.obs[l,m,rep],theta[m,samp.type[l],G.true[ID.cand[l],m],1:n.levels[m]],log=TRUE)
+              ll.theta.cand[l,m,rep] <- dcat(G.obs[l,m,rep],theta[m,samp.type[l],G.true[ID.cand[l],m],1:n.levels[m]],log=TRUE)
             }else{
-              ll.theta.cand[l,m,rep]=0
+              ll.theta.cand[l,m,rep] <- 0
             }
           }
         }
         if(runif(1)<exp((sum(ll.y.cand[swapped,this.j[l]])+sum(ll.theta.cand[l,,]))-
                         (sum(ll.y[swapped,this.j[l]])+sum(ll.theta[l,,])))*
            (backprob/propprob)*(focalbackprob/focalprob)){
-          y.true[swapped,this.j[l]]=y.cand[swapped,this.j[l]]
-          ll.y[swapped,this.j[l]]=ll.y.cand[swapped,this.j[l]]
-          ll.theta[l,,]=ll.theta.cand[l,,]
-          ID.curr[l]=ID.cand[l]
+          y.true[swapped,this.j[l]] <- y.cand[swapped,this.j[l]]
+          ll.y[swapped,this.j[l]] <- ll.y.cand[swapped,this.j[l]]
+          ll.theta[l,,] <- ll.theta.cand[l,,]
+          ID.curr[l] <- ID.cand[l]
         }
       }
     }
     
     #update G.latent after ID changes
-    G.latent=matrix(TRUE,nrow=M,ncol=n.cov)
+    G.latent <- matrix(TRUE,nrow=M,ncol=n.cov)
     for(l in 1:n.samples){
       for(m in 1:n.cov){
         for(rep in 1:n.rep){
           if(na.ind[l,m,rep]==FALSE){ #if this sample is not latent
-            G.latent[ID.curr[l],m]=FALSE #then its ID is not latent
+            G.latent[ID.curr[l],m] <- FALSE #then its ID is not latent
           }
         }
       }
@@ -429,17 +425,17 @@ zSampler <- nimbleFunction(
   run = function() {
     for(up in 1:z.ups){ #how many updates per iteration?
       #propose to add/subtract 1
-      updown=rbinom(1,1,0.5) #p=0.5 is symmetric. If you change this, must account for asymmetric proposal
-      reject=FALSE #we auto reject if you select a detected call
+      updown <- rbinom(1,1,0.5) #p=0.5 is symmetric. If you change this, must account for asymmetric proposal
+      reject <- FALSE #we auto reject if you select a detected call
       if(updown==0){#subtract
         #find all z's currently on
-        z.on=which(model$z[g,1:M]==1)
-        n.z.on=length(z.on)
-        pick=rcat(1,rep(1/n.z.on,n.z.on)) #select one of these individuals
-        pick=z.on[pick]
+        z.on <- which(model$z[g,1:M]==1)
+        n.z.on <- length(z.on)
+        pick <- rcat(1,rep(1/n.z.on,n.z.on)) #select one of these individuals
+        pick <- z.on[pick]
         #prereject turning off individuals currently allocated samples
         if(model$capcounts[g,pick]>0){#is this an individual with samples?
-          reject=TRUE
+          reject <- TRUE
         }
         if(!reject){
           #get initial logprobs for N and y
@@ -479,10 +475,10 @@ zSampler <- nimbleFunction(
         }
       }else{#add
         if(model$N[g] < M){ #cannot update if z maxed out. Need to raise M
-          z.off=which(model$z[g,1:M]==0)
-          n.z.off=length(z.off)
-          pick=rcat(1,rep(1/n.z.off,n.z.off)) #select one of these individuals
-          pick=z.off[pick]
+          z.off <- which(model$z[g,1:M]==0)
+          n.z.off <- length(z.off)
+          pick <- rcat(1,rep(1/n.z.off,n.z.off)) #select one of these individuals
+          pick <- z.off[pick]
           
           #get initial logprobs for N and y
           lp.initial.N <- model$getLogProb(N.node)

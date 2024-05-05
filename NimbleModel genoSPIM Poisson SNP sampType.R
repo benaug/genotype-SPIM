@@ -10,7 +10,7 @@ NimModel <- nimbleCode({
     for(k in 1:3){
       alpha[m,k] <- 1 #dirichlet prior parameters
     }
-    gammaMat[m,1:3]~ddirch(alpha[m,1:3])
+    gammaMat[m,1:3] ~ ddirch(alpha[m,1:3])
   }
   #genotyping error priors for heterozygote and homozygote loci-level genotypes
   #for each samp.level
@@ -27,7 +27,7 @@ NimModel <- nimbleCode({
   for(i in 1:M){
     z[i] ~ dbern(psi)
     for(m in 1:n.cov){
-      G.true[i,m]~dcat(gammaMat[m,1:3])
+      G.true[i,m] ~ dcat(gammaMat[m,1:3])
     }
     s[i,1] ~ dunif(xlim[1],xlim[2])
     s[i,2] ~ dunif(ylim[1],ylim[2])

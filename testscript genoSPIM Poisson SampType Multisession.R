@@ -255,15 +255,18 @@ parameters <- c('lam0.fixed','sigma.fixed','N','D','n','p.geno.het','p.geno.hom'
 #can also monitor a different set of parameters with a different thinning rate
 parameters2 <- c('ID',"G.true")
 nt <- 1 #thinning rate
-nt2 <- 50#thin more
+nt2 <- 50 #thin more
 
 # Build the model, configure the mcmc, and compile
 # can ignore warnings about 1) ID in constants 2) possible size mismatch for G.obs.
 start.time <- Sys.time()
 Rmodel <- nimbleModel(code=NimModel, constants=constants, data=Nimdata,check=FALSE,inits=Niminits)
-#can use "nodes" argument in configureMCMC below to omit y.true and G.true that are replaced below for faster
-#configuration
-conf <- configureMCMC(Rmodel,monitors=parameters, thin=nt, monitors2=parameters2,thin2=nt2,useConjugacy = TRUE)
+#using config.nodes for faster compilation-skip nimble assigning samplers that need to be removed and replaced
+#if you add parameters to the model, add to config.nodes to assign them samplers
+config.nodes <- c("p.geno.het","p.geno.hom","D","sigma.fixed","lam0.fixed","gammaMat")
+conf <- configureMCMC(Rmodel,monitors=parameters, thin=nt,
+                      monitors2=parameters2,thin2=nt2,
+                      nodes=config.nodes,useConjugacy = TRUE) 
 
 #conf$printSamplers() #shows the samplers used for each parameter and latent variable
 
@@ -289,8 +292,8 @@ for(g in 1:N.session){
 
 ##Here, we remove the default sampler for y.true
 #and replace it with the custom "IDSampler".
-conf$removeSampler("G.obs") #nimble will assign sampler here if any missing data. Remove it.
-conf$removeSampler("y.true")
+# conf$removeSampler("G.obs") #nimble will assign sampler here if any missing data. Remove it.
+# conf$removeSampler("y.true")
 for(g in 1:N.session){
   conf$addSampler(target = paste0("y.true[1:",g,",1:",M[g],",1:",J[g],"]"),
                   type = 'IDSampler',control = list(M=M[g],J=J[g],K1D=nimbuild$K1D[g,1:J[g]],n.cov=n.cov.use,n.samples=n.samples[g],
@@ -303,7 +306,7 @@ for(g in 1:N.session){
 }
 
 #replace default G.true sampler, which is not correct, with custom sampler for G.true, "GSampler"
-conf$removeSampler("G.true")
+# conf$removeSampler("G.true")
 # # this is the "safe" version. It will use a lot of RAM, but will be correct if any parameters
 # # depend on G.true besides G.obs, which seems unlikely for genotypes. But if, say, G.true[,1] is "sex", and
 # # you specify that sigma varies by sex, this update is correct and the more efficient one below will not be.
@@ -338,7 +341,9 @@ for(g in 1:N.session){
   
 }
 
-conf$removeSampler("s")
+#RW block update for s[g,i,1:2]
+#only tuned for when z=1. When z=0, it draws from the prior, assumed to be uniform. 
+# conf$removeSampler("s")
 for(g in 1:N.session){
   for(i in 1:M[g]){
     conf$addSampler(target = paste("s[",g,",",i,", 1:2]", sep=""),
@@ -347,6 +352,10 @@ for(g in 1:N.session){
   }
 }
 
+#block update for lam0 and sigma helps when data sparse enough to cause correlated posteriors. 
+# conf$removeSampler(c("lam0.fixed","sigma.fixed")) #often better to keep independent samplers
+conf$addSampler(target = c("lam0.fixed","sigma.fixed"),
+                type = 'RW_block',control = list(adaptive=TRUE),silent = TRUE)
 
 # Build and compile
 Rmcmc <- buildMCMC(conf)
@@ -358,7 +367,7 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 #Can ignore nimble warnings about NA or NaN in ptype and theta
 #Can ignore nimble warnings about G.obs value NA or NaN, due to padding to keep dimensions constant for nimble
 start.time2 <- Sys.time()
-Cmcmc$run(1500,reset=FALSE) #can extend run by rerunning this line
+Cmcmc$run(2500,reset=FALSE) #can extend run by rerunning this line
 end.time <- Sys.time()
 end.time-start.time  # total time for compilation, replacing samplers, and fitting
 end.time-start.time2 # post-compilation run time

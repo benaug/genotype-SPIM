@@ -2,16 +2,16 @@ NimModel <- nimbleCode({
   #--------------------------------------------------------------
   # priors
   #--------------------------------------------------------------
-  psi~dunif(0,1)
-  lam0~dunif(0,10)
-  theta.d~dunif(0,25) #careful with this prior. Too much prior mass near 0 gives very strong prior weight to high overdispersion
-  sigma~dunif(0,100)
+  psi ~ dunif(0,1)
+  lam0 ~ dunif(0,10)
+  theta.d ~ dunif(0,25) #careful with this prior. Too much prior mass near 0 gives very strong prior weight to high overdispersion
+  sigma ~ dunif(0,100)
   #genotype frequency priors
   for(m in 1:n.cov){
     for(k in 1:n.levels[m]){
       alpha[m,k] <- 1 #dirichlet prior parameters
     }
-    gammaMat[m,1:n.levels[m]]~ddirch(alpha[m,1:n.levels[m]])
+    gammaMat[m,1:n.levels[m]] ~ ddirch(alpha[m,1:n.levels[m]])
   }
   #genotyping error priors for heterozygote and homozygote loci-level genotypes
   alpha.het[1:3] <- c(1,1,1)
@@ -25,12 +25,12 @@ NimModel <- nimbleCode({
   for(i in 1:M){
     z[i] ~ dbern(psi)
     for(m in 1:n.cov){
-      G.true[i,m]~dcat(gammaMat[m,1:n.levels[m]])
+      G.true[i,m] ~ dcat(gammaMat[m,1:n.levels[m]])
     }
     s[i,1] ~ dunif(xlim[1],xlim[2])
     s[i,2] ~ dunif(ylim[1],ylim[2])
     lam[i,1:J] <- GetDetectionRate(s = s[i,1:2], X = X[1:J,1:2], J=J,sigma=sigma, lam0=lam0, z=z[i])
-    p[i,1:J] <- theta.d/(theta.d+lam[i,1:J])
+    p[i,1:J] <- theta.d/(theta.d + lam[i,1:J])
     y.true[i,1:J] ~ dNBVector(p=p[i,1:J],theta=theta.d*K1D[1:J],z=z[i]) #vectorized obs mod. trap op: sum of NB RVs is NB with theta=N*theta
   }
   #genotype classification array
