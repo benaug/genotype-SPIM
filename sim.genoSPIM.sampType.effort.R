@@ -1,4 +1,4 @@
-e2dist = function (x, y){
+e2dist <- function (x, y){
   i <- sort(rep(1:nrow(y), nrow(x)))
   dvec <- sqrt((x[, 1] - y[i, 1])^2 + (x[, 2] - y[i, 2])^2)
   matrix(dvec, nrow = nrow(x), ncol = nrow(y), byrow = F)
@@ -14,7 +14,7 @@ sim.genoSPIM.sampType.effort <-
       if(length(gamma[[l]])!=length(IDcovs[[l]]))stop("gamma[[l]] must have one element per element of IDcovs[[l]]")
       if(sum(gamma[[l]])!=1)stop("gamma[[l]] must sum to 1")
     } 
-    samp.levels=length(p.sampType)
+    samp.levels <- length(p.sampType)
     for(i in 1:samp.levels){
       if(sum(p.geno.hom[[i]])!=1)stop("p.geno.hom must sum to 1 for each sampType")
       if(sum(p.geno.het[[i]])!=1)stop("p.geno.het must sum to 1 for each sampType")

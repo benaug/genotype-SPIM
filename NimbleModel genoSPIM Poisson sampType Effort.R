@@ -11,7 +11,7 @@ NimModel <- nimbleCode({
     for(k in 1:n.levels[m]){
       alpha[m,k] <- 1 #dirichlet prior parameters
     }
-    gammaMat[m,1:n.levels[m]]~ddirch(alpha[m,1:n.levels[m]])
+    gammaMat[m,1:n.levels[m]] ~ ddirch(alpha[m,1:n.levels[m]])
   }
   #genotyping error priors for heterozygote and homozygote loci-level genotypes
   #for each samp.level

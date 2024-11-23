@@ -14,7 +14,7 @@ sim.genoSPIM.sampType <-
       if(length(gamma[[l]])!=length(IDcovs[[l]]))stop("gamma[[l]] must have one element per element of IDcovs[[l]]")
       if(sum(gamma[[l]])!=1)stop("gamma[[l]] must sum to 1")
     } 
-    samp.levels=length(p.sampType)
+    samp.levels <- length(p.sampType)
     for(i in 1:samp.levels){
       if(sum(p.geno.hom[[i]])!=1)stop("p.geno.hom must sum to 1 for each sampType")
       if(sum(p.geno.het[[i]])!=1)stop("p.geno.het must sum to 1 for each sampType")

@@ -43,7 +43,7 @@ Getcapcounts <- nimbleFunction(
     returnType(double(1))
     M <- nimDim(y.true)[1]
     J <- nimDim(y.true)[2]
-    capcounts=numeric(M, value = 0)
+    capcounts <- numeric(M, value = 0)
     for(i in 1:M){
       capcounts[i] <- sum(y.true[i,1:J])
     }
@@ -51,7 +51,7 @@ Getcapcounts <- nimbleFunction(
   }
 )
 Getncap <- nimbleFunction(
-  run = function(capcounts=double(1),ID=double(1),G.latent=double(2)){ #don't need ID, but nimble requires is it used in a function 
+  run  <-  function(capcounts=double(1),ID=double(1),G.latent=double(2)){ #don't need ID, but nimble requires is it used in a function 
     returnType(double(0))
     M <- nimDim(capcounts)[1]
     nstate <- numeric(M, value = 0)

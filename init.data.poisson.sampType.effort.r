@@ -14,7 +14,7 @@ init.data.poisson.sampType.effort <- function(data=NA,M=NA,inits=inits){
   n.cov <- data$n.cov
   n.levels <- data$n.levels
   IDcovs <- data$IDlist$IDcovs
-  samp.type=data$samp.type
+  samp.type <- data$samp.type
   effort <- data$effort
   K2D <- data$K2D
   buff <- data$buff
