@@ -16,15 +16,13 @@ init.data.Dcov.poisson.sampType <- function(data=NA,M=NA,inits=inits){
   n.levels <- data$n.levels
   IDcovs <- data$IDlist$IDcovs
   samp.type <- data$samp.type
-  xlim <- c(min(X[,1]),max(X[,1]))+c(-buff, buff)
-  ylim <- c(min(X[,2]),max(X[,2]))+c(-buff, buff)
   n.samples <- length(this.j)
   G.obs <- data$G.obs
   if(!is.array(G.obs))stop("G.obs must be an array")
   n.rep <- dim(G.obs)[3]
   n.cov <- dim(G.obs)[2]
-  xlim <- c(min(X[,1]),max(X[,1]))+c(-buff, buff)
-  ylim <- c(min(X[,2]),max(X[,2]))+c(-buff, buff)
+  xlim <- data$xlim
+  ylim <- data$ylim
   
   ##pull out initial values
   lam0 <- inits$lam0

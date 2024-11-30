@@ -133,11 +133,11 @@ n.samples <- data$n.samples
 
 #Just pull out the first one since they're all the same for SNPs
 ptypeMatrix  <-  built.genos$ptypeArray[1,,]
-thetaMatrix <- nimbuild$thetaArray[1,,,]
 
 #inits for nimble
 Niminits <- list(z=rep(1,M),s=nimbuild$s,G.true=nimbuild$G.true,ID=nimbuild$ID,capcounts=rowSums(nimbuild$y.true),
-                 y.true=nimbuild$y.true,G.latent=nimbuild$G.latent,theta=thetaMatrix,
+                 y.true=nimbuild$y.true,G.latent=nimbuild$G.latent,
+                 p.geno.het=p.geno.het.init,p.geno.hom=p.geno.hom.init,
                  lam0=inits$lam0,sigma=inits$sigma) #using lam0 and sigma truth for inits. dont do in practice.
 
 #constants for Nimble

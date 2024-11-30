@@ -217,9 +217,6 @@ if(n.cov==1){
 }
 n.samples <- nimbuild$n.samples
 
-#We can't use a list (easily) in nimble, so we use a ragged array instead
-ptypeArray <- built.genos$ptypeArray
-
 #inits for nimble
 capcounts <- apply(nimbuild$y.true,c(1,2),sum,na.rm=TRUE)
 
@@ -230,7 +227,8 @@ thetaArray <- nimbuild$thetaArray[1,,,,]#pull out one session to use
 N.init <- rowSums(nimbuild$z,na.rm=TRUE) #N.init must be consistent with z.init!
 
 Niminits <- list(z=nimbuild$z,s=nimbuild$s,G.true=nimbuild$G.true,ID=nimbuild$ID,capcounts=capcounts,
-                 y.true=nimbuild$y.true,G.latent=nimbuild$G.latent,theta=thetaArray,
+                 y.true=nimbuild$y.true,G.latent=nimbuild$G.latent,
+                 p.geno.het=p.geno.het.init,p.geno.hom=p.geno.hom.init,
                  lam0.fixed=1,sigma.fixed=1,N=N.init)
 
 #constants for Nimble

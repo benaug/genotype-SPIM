@@ -260,13 +260,11 @@ if(n.cov==1){
 }
 n.samples <- data$n.samples
 
-#We can't use a list (easily) in nimble, so we use a ragged array instead
-ptypeArray <- built.genos$ptypeArray
-
 #inits for nimble
 Niminits <- list(z=nimbuild$z,N=sum(nimbuild$z),D0=sum(nimbuild$z)/(sum(data$InSS)*data$res^2),D.beta1=0,
                  s=nimbuild$s,G.true=nimbuild$G.true,ID=nimbuild$ID,capcounts=rowSums(nimbuild$y.true),
-                 y.true=nimbuild$y.true,G.latent=nimbuild$G.latent,theta=nimbuild$thetaArray,
+                 y.true=nimbuild$y.true,G.latent=nimbuild$G.latent,
+                 p.geno.het=p.geno.het.init,p.geno.hom=p.geno.hom.init,
                  lam0=inits$lam0,sigma=inits$sigma)
 
 #constants for Nimble

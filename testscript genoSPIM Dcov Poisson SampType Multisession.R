@@ -317,16 +317,13 @@ ptypeArray <- built.genos$ptypeArray
 #inits for nimble
 capcounts <- apply(nimbuild$y.true,c(1,2),sum,na.rm=TRUE)
 
-#data initializer spits out one thetaArray per session, but we only need 1 if the
-#genotyping error rates are shared across sessions as I am assuming here
-str(nimbuild$thetaArray)
-thetaArray <- nimbuild$thetaArray[1,,,,]#pull out one session to use
 N.init <- rowSums(nimbuild$z,na.rm=TRUE) #N.init must be consistent with z.init!
 D0.init <- N.init/(unlist(lapply(data,function(x){sum(x$InSS)}))*nimbuild$cellArea)
 
 Niminits <- list(z=nimbuild$z,s=nimbuild$s,N=N.init,D0=D0.init,
                  G.true=nimbuild$G.true,ID=nimbuild$ID,capcounts=capcounts,
-                 y.true=nimbuild$y.true,G.latent=nimbuild$G.latent,theta=thetaArray,
+                 y.true=nimbuild$y.true,G.latent=nimbuild$G.latent,
+                 p.geno.het=p.geno.het.init,p.geno.hom=p.geno.hom.init,
                  lam0.fixed=1,sigma.fixed=1)
 
 #constants for Nimble
