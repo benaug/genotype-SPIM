@@ -226,7 +226,7 @@ n.samples <- data$n.samples
 #inits for nimble
 Niminits <- list(z=rep(1,M),s=nimbuild$s,G.true=nimbuild$G.true,ID=nimbuild$ID,capcounts=rowSums(nimbuild$y.true),
                  y.true=nimbuild$y.true,G.latent=nimbuild$G.latent,
-                 p.geno.het=p.geno.het.init,p.geno.hom=p.geno.hom.init,
+                 p.geno.het=inits$p.geno.het,p.geno.hom=inits$p.geno.hom,
                  beta0.lam0=inits$beta0.lam0,beta1.lam0=inits$beta1.lam0,sigma=inits$sigma)
 
 #constants for Nimble

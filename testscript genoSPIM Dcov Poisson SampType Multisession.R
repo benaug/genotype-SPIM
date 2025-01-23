@@ -323,7 +323,7 @@ D0.init <- N.init/(unlist(lapply(data,function(x){sum(x$InSS)}))*nimbuild$cellAr
 Niminits <- list(z=nimbuild$z,s=nimbuild$s,N=N.init,D0=D0.init,
                  G.true=nimbuild$G.true,ID=nimbuild$ID,capcounts=capcounts,
                  y.true=nimbuild$y.true,G.latent=nimbuild$G.latent,
-                 p.geno.het=p.geno.het.init,p.geno.hom=p.geno.hom.init,
+                 p.geno.het=inits$p.geno.het,p.geno.hom=inits$p.geno.hom,
                  lam0.fixed=1,sigma.fixed=1)
 
 #constants for Nimble

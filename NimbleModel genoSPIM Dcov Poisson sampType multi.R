@@ -46,7 +46,7 @@ NimModel <- nimbleCode({
     
     for(i in 1:M[g]){
       for(m in 1:n.cov){
-        G.true[g,i,m]~dcat(gammaMat[g,m,1:n.levels[m]]) #True genotypes
+        G.true[g,i,m] ~ dcat(gammaMat[g,m,1:n.levels[m]]) #True genotypes
       }
       #dunif() here implies uniform distribution within a grid cell
       #also tells nimble s's are in continuous space, not discrete
