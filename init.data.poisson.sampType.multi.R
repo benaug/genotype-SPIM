@@ -25,7 +25,6 @@ init.data.poisson.sampType.multi <- function(data=NA,M=NA,inits=inits){
   M.max <- max(M)
   J <- unlist(lapply(data,function(x){nrow(x$X)}))
   J.max <- max(J)
-  y <- array(NA,dim=c(N.session,M.max,J.max)) #maximal augmentation across sessions
   X <- array(NA,dim=c(N.session,J.max,2))
   xlim <- ylim <- matrix(0,N.session,2)
   K <- n <- rep(NA,N.session)
@@ -64,7 +63,6 @@ init.data.poisson.sampType.multi <- function(data=NA,M=NA,inits=inits){
   
   #Now fill in for each session
   for(g in 1:N.session){
-    y[g,1:data[[g]]$n,1:J[g]] <- apply(data[[g]]$y,c(1,2),sum)
     X[g,1:J[g],1:2] <- data[[g]]$X
     buff<- data[[g]]$buff
     xlim[g,] <- c(min(X[g,1:J[g],1]),max(X[g,1:J[g],1]))+c(-buff, buff)
