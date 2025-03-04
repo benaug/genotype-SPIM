@@ -20,7 +20,7 @@ init.data.Dcov.poisson.sampType.multi <- function(data=NA,M=NA,inits=inits){
   J <- unlist(lapply(data,function(x){nrow(x$X)}))
   J.max <- max(J)
   X <- array(NA,dim=c(N.session,J.max,2))
-  K <- n <- rep(NA,N.session)
+  K <- rep(NA,N.session)
   K1D <- matrix(0,N.session,J.max)
   
   #genotype structures
@@ -73,7 +73,6 @@ init.data.Dcov.poisson.sampType.multi <- function(data=NA,M=NA,inits=inits){
   for(g in 1:N.session){
     X[g,1:J[g],1:2] <- data[[g]]$X
     K[g] <- data[[g]]$K
-    n[g] <- data[[g]]$n
     K1D[g,1:J[g]] <- rep(K[g],J[g])
     #genotyping structures - data
     this.j[g,1:n.samples[g]] <- data[[g]]$this.j

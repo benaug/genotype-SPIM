@@ -27,7 +27,7 @@ init.data.poisson.sampType.multi <- function(data=NA,M=NA,inits=inits){
   J.max <- max(J)
   X <- array(NA,dim=c(N.session,J.max,2))
   xlim <- ylim <- matrix(0,N.session,2)
-  K <- n <- rep(NA,N.session)
+  K <- rep(NA,N.session)
   K1D <- matrix(0,N.session,J.max)
   
   #genotype structures
@@ -68,7 +68,6 @@ init.data.poisson.sampType.multi <- function(data=NA,M=NA,inits=inits){
     xlim[g,] <- c(min(X[g,1:J[g],1]),max(X[g,1:J[g],1]))+c(-buff, buff)
     ylim[g,] <- c(min(X[g,1:J[g],2]),max(X[g,1:J[g],2]))+c(-buff, buff)
     K[g] <- data[[g]]$K
-    n[g] <- data[[g]]$n
     K1D[g,1:J[g]] <- rep(K[g],J[g])
     #genotyping structures - data
     this.j[g,1:n.samples[g]] <- data[[g]]$this.j
