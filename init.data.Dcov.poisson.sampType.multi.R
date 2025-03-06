@@ -68,12 +68,14 @@ init.data.Dcov.poisson.sampType.multi <- function(data=NA,M=NA,inits=inits){
   InSS <- array(0,dim=c(N.session,n.cells.max))
   D.cov <- array(NA,dim=c(N.session,n.cells.max))
   cells <- array(0,dim=c(N.session,n.cells.x.max,n.cells.y.max))
+  xlim <- ylim <- matrix(NA,N.session,2)
   
   #Now fill in for each session
   for(g in 1:N.session){
     X[g,1:J[g],1:2] <- data[[g]]$X
     K[g] <- data[[g]]$K
-    K1D[g,1:J[g]] <- rep(K[g],J[g])
+    # K1D[g,1:J[g]] <- rep(K[g],J[g])
+    K1D[g,1:J[g]] <- data[[g]]$K1D
     #genotyping structures - data
     this.j[g,1:n.samples[g]] <- data[[g]]$this.j
     this.k[g,1:n.samples[g]] <- data[[g]]$this.k
