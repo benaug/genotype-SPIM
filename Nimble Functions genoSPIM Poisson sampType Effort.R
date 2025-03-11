@@ -326,15 +326,15 @@ IDSampler <- nimbleFunction(
       }
     }
     ll.theta.cand <- ll.theta
-    
+    y.cand <- y.true
     for(l in 1:n.samples){
-      y.cand <- y.true #necessary for every sample for correct proposal probs
       #proposal distribution is combination of distance-based and genotype-based distributions
       dist.probs <- lam[,this.j[l],this.k[l]]*z
       #G.probs proportional to genotyping error likelihood over all loci and reps
       G.probs <- z #setting to z initializes to 1 if z=1, 0 otherwise
       for(i in 1:M){
-        if(z[i]==1){
+        # if(z[i]==1){
+        if(z[i]==1&dist.probs[i]>1e-10){ #skip if z=0 or s not close to focal s
           for(m in 1:n.cov){
             for(rep in 1:n.rep){
               if(na.ind[l,m,rep]==FALSE){ #if observed
@@ -360,8 +360,9 @@ IDSampler <- nimbleFunction(
         y.cand[ID.curr[l],this.j[l],this.k[l]] <- y.true[ID.curr[l],this.j[l],this.k[l]]-1
         y.cand[ID.cand[l],this.j[l],this.k[l]] <- y.true[ID.cand[l],this.j[l],this.k[l]]+1
 
-        focalprob <- (sum(ID.curr==ID.curr[l])/n.samples)*(y.true[ID.curr[l],this.j[l],this.k[l]]/sum(y.true[ID.curr[l],,]))
-        focalbackprob <- (sum(ID.cand==ID.cand[l])/n.samples)*(y.cand[ID.cand[l],this.j[l],this.k[l]]/sum(y.cand[ID.cand[l],,]))
+        #select sample to move proposal probabilities
+        focalprob <- y.true[ID.curr[l],this.j[l],this.k[l]]/n.samples
+        focalbackprob <- y.cand[ID.cand[l],this.j[l],this.k[l]]/n.samples
 
         ##update ll.y. one ind at a time bc nimble can't do math in 3D
         ll.y.cand[swapped[1],this.j[l],this.k[l]] <- dpois(y.cand[swapped[1],this.j[l],this.k[l]],model$lam[swapped[1],this.j[l],this.k[l]],log=TRUE)
@@ -391,6 +392,10 @@ IDSampler <- nimbleFunction(
           ll.y[swapped[2],this.j[l],this.k[l]] <- ll.y.cand[swapped[2],this.j[l],this.k[l]]
           ll.theta[l,,] <- ll.theta.cand[l,,]
           ID.curr[l] <- ID.cand[l]
+        }else{
+          #set these back.
+          y.cand[swapped[1],this.j[l],this.k[l]] <- y.true[swapped[1],this.j[l],this.k[l]]
+          y.cand[swapped[2],this.j[l],this.k[l]] <- y.true[swapped[2],this.j[l],this.k[l]]
         }
       }
     }
