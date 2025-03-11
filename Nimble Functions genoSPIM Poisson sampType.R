@@ -315,6 +315,7 @@ IDSampler <- nimbleFunction(
     }
     ll.theta.cand <- ll.theta
     y.cand <- y.true
+    ID.cand <- ID.curr
     for(l in 1:n.samples){
       #proposal distribution is combination of distance-based and genotype-based distributions
       dist.probs <- lam[,this.j[l]]*z
@@ -334,7 +335,6 @@ IDSampler <- nimbleFunction(
       }
       total.probs <- dist.probs*G.probs
       total.probs <- total.probs/sum(total.probs) 
-      ID.cand <- ID.curr
       ID.cand[l] <- rcat(1,prob=total.probs)
       if(ID.curr[l]!=ID.cand[l]){ #skip if propose same ID
         swapped <- c(ID.curr[l],ID.cand[l])#order swap.out then swap.in
@@ -371,6 +371,7 @@ IDSampler <- nimbleFunction(
         }else{
           #set these back.
           y.cand[swapped,this.j[l]] <- y.true[swapped,this.j[l]]
+          ID.cand[l] <- ID.curr[l]
         }
       }
     }
