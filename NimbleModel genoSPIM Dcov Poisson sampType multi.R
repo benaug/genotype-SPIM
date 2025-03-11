@@ -69,9 +69,9 @@ NimModel <- nimbleCode({
                                         n.rep = n.rep[g],na.ind=na.ind[g,l,m,1:n.rep[g]]) 
       }
     }
-    #calculate number of inds captured
-    capcounts[g,1:M[g]] <- Getcapcounts(y.true=y.true[g,1:M[g],1:J[g]]) #intermediate object
-    #must use ID and G.latent somewhere to make nimble happy. Sticking them here, not used in function.
-    n[g] <- Getncap(capcounts=capcounts[g,1:M[g]],ID=ID[g,1:n.samples[g]],G.latent=G.latent[g,1:M[g],1:n.cov])
+    #calculate number of inds captured and abundance
+    capcounts[g,1:M[g]] <- Getcapcounts(ID=ID[g,1:n.samples[g]],M=M[g]) #intermediate object
+    #must use G.latent somewhere to make nimble happy. Sticking it here, not used in function.
+    n[g] <- Getncap(capcounts=capcounts[g,1:M[g]],G.latent=G.latent[g,1:M[g],1:n.cov])
   }
 })# end model
