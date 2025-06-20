@@ -271,7 +271,7 @@ Cmcmc <- compileNimble(Rmcmc, project = Rmodel)
 #Can ignore nimble warnings about NA or NaN in ptype and theta
 #Can ignore nimble warnings about G.obs value NA or NaN, due to padding to keep dimensions constant for nimble
 start.time2 <- Sys.time()
-Cmcmc$run(5000,reset=FALSE) #can extend run by rerunning this line
+Cmcmc$run(1000,reset=FALSE) #can extend run by rerunning this line
 end.time <- Sys.time()
 end.time - start.time  # total time for compilation, replacing samplers, and fitting
 end.time - start.time2 # post-compilation run time
