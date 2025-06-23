@@ -42,8 +42,6 @@ sim.genoSPIM.Dcov.sampType <-
     
     # simulate a population of activity centers
     pi.cell <- lambda.cell/sum(lambda.cell)
-    #zero out non-habitat
-    pi.cell[InSS==0] <- 0
     s.cell <- sample(1:n.cells,N,prob=pi.cell,replace=TRUE)
     #distribute activity centers uniformly inside cells
     s <- matrix(NA,nrow=N,ncol=2)
